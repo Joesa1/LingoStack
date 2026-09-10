@@ -1,0 +1,22 @@
+{
+  "name": "lingo-companion",
+  "version": "1.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "typecheck": "wxt prepare && tsc --noEmit",
+    "test": "vitest run",
+    "package": "npm run typecheck && npm test && npm run build && node scripts/package.mjs"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "@types/node": "^22.0.0",
+    "jsdom": "^26.1.0",
+    "playwright": "1.62.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.8",
+    "wxt": "^0.20.6"
+  }
+}

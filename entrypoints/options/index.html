@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>译伴设置</title><link rel="stylesheet" href="../ui.css"></head>
+<body class="options"><main>
+<header><div class="brand-mark" aria-hidden="true">译</div><div><h1>让内容说你的语言。</h1><p class="subtitle">译伴 · 模型与声音设置</p></div></header>
+<div class="settings-grid"><section><div class="section-label">翻译模型</div><h2>连接你自己的 API</h2><p class="hint">选择服务商，填写密钥和模型。译文由你选择的服务商生成。</p>
+<form id="configForm"><label>服务商<select id="preset"></select></label><label>API key<div class="input-action"><input id="apiKey" type="password" autocomplete="off" spellcheck="false" placeholder="粘贴你的 API key"><button type="button" id="reveal">显示</button></div></label>
+<label>模型名称<div class="input-action"><input id="model" aria-describedby="modelsStatus" placeholder="填写模型 ID，或从获取的列表选择" autocomplete="off" spellcheck="false"><button type="button" id="loadModels">获取列表</button></div></label>
+<p id="modelsStatus" class="feedback" role="status" aria-live="polite" hidden></p>
+<label id="modelPicker" hidden>选择已获取的模型<select id="modelSelect"><option value="">请选择模型</option></select></label>
+<details id="advanced"><summary>接口地址与协议</summary><label>API 地址<input id="baseUrl" type="url" placeholder="https://api.example.com/v1" spellcheck="false"></label><label>接口协议<select id="protocol"><option value="openai-compatible">兼容聊天接口 · Chat Completions</option><option value="openai-responses">OpenAI Responses</option><option value="anthropic">Anthropic Messages</option><option value="gemini">Google Gemini</option></select></label><p class="hint">中转服务选择其文档要求的协议。API 地址可以填写到 /v1，不必包含 /chat/completions。</p></details>
+<div class="two actions"><button class="primary" id="save" type="submit">保存配置</button><button id="test" type="button">测试翻译</button></div><p id="testStatus" class="feedback" role="status" aria-live="polite" hidden></p></form>
+<p class="hint privacy">密钥保存在此浏览器本机，不同步到云端，不发送给网页。所选文字和字幕会发给你配置的模型服务商。测试翻译也会产生一次 API 请求。</p><button id="delete" class="quiet danger">删除保存的 API 配置</button></section>
+<section><div class="section-label">字幕朗读</div><h2>用本机声音听译文</h2><p class="hint">Mac 使用系统提供的声音，不需要另付语音 API 费用。</p>
+<label>目标语言<select id="targetLang"></select></label><label>朗读声音<select id="voice"><option value="">按目标语言自动选择</option></select></label><label>语速 <output id="rateValue">1.0×</output><input id="rate" type="range" min="0.5" max="2" step="0.1" value="1"></label>
+<div class="two"><button id="preview">试听声音</button><button id="stop">停止试听</button></div>
+<label class="row">朗读时静音视频原声<input id="mute" type="checkbox" role="switch"></label><label class="row">长句读完再继续视频<input id="wait" type="checkbox" role="switch"></label><p class="hint">开启后，长句来不及读完时会暂缓视频；关闭后保持视频连续播放，过时的朗读会被替换。拖动进度会清空旧朗读。</p>
+<div class="reading-sample"><span>双语字幕预览</span><strong>世界比你想象的更广阔。</strong><p>The world is wider than you think.</p></div>
+<p class="hint">若没有合适的声音，请在 macOS 系统设置的朗读功能中下载对应语言声音，再重新打开此页。视频中是否开启字幕与朗读，在扩展弹窗里控制。</p></section></div>
+<footer><p id="status" role="status" aria-live="polite">正在读取设置…</p><span class="shortcut">译伴 1.0.1</span></footer>
+</main><script type="module" src="main.ts"></script></body></html>

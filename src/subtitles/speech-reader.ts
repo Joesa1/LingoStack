@@ -1,4 +1,5 @@
 import type { SubtitleCue } from "./types"
+import { normalizeText } from "../shared/text-normalize"
 import type { WebTranslateSettings } from "../shared/settings-store"
 
 export function createSpeechReader(video: HTMLVideoElement, settings: WebTranslateSettings, onError: (message: string) => void) {
@@ -6,7 +7,7 @@ export function createSpeechReader(video: HTMLVideoElement, settings: WebTransla
   const originalMuted = video.muted
   let active: SubtitleCue | undefined
   let speakingId: string | undefined
-  let spokenStart: number | undefined
+  let spokenCue: SubtitleCue | undefined
   let holding = false
   let ownPause = false
   let disposed = false
@@ -14,7 +15,7 @@ export function createSpeechReader(video: HTMLVideoElement, settings: WebTransla
   let mutedByUs = false
   function mute() { if (settings.muteOriginal) { video.muted = true; mutedByUs = true } }
   function restoreMute() { if (mutedByUs) { video.muted = originalMuted; mutedByUs = false } }
-  function send(message: unknown) { if (!disposed) { try { port.postMessage(message) } catch { fail("朗读连接已断开，请重新开启系统朗读。") } } }
+  function send(message: unknown) { if (!disposed) { try { port.postMessage(message) } catch { fail("朗读连接已断开，请重新开启译文朗读。") } } }
   function resumeVideo() {
     if (!holding) return
     holding = false
@@ -24,10 +25,14 @@ export function createSpeechReader(video: HTMLVideoElement, settings: WebTransla
   function stop() { send({ type: "stop" }); speakingId = undefined; clearTimeout(watchdog); restoreMute() }
   function update(cue: SubtitleCue | undefined) {
     active = cue
-    if (disposed || video.paused || video.seeking || !cue?.translation || spokenStart === cue.start) return
+    if (disposed || video.paused || video.seeking || !cue?.translation || spokenCue?.start === cue.start) return
+    // Overlapping duplicate cues must not restart an utterance. A real later
+    // occurrence or an explicit seek remains eligible to be read again.
+    if (spokenCue && cue.start < spokenCue.end && normalizeText(cue.text) === normalizeText(spokenCue.text)
+      && normalizeText(cue.translation) === normalizeText(spokenCue.translation ?? "")) return
     // One utterance at a time. With continuous playback, replace overdue speech rather than accumulate a queue.
     stop()
-    spokenStart = cue.start
+    spokenCue = cue
     speakingId = `${cue.start}:${Date.now()}`
     send({ type: "speak", id: speakingId, text: cue.translation, playbackRate: video.playbackRate })
     watchdog = setTimeout(() => { stop(); fail("朗读等待超时，请重新播放或更换声音。") }, 90_000)
@@ -39,9 +44,9 @@ export function createSpeechReader(video: HTMLVideoElement, settings: WebTransla
   }
   function pause() { if (ownPause) { ownPause = false; return }; if (speakingId) { clearTimeout(watchdog); send({ type: "pause" }) } }
   function play() { holding = false; if (speakingId) { send({ type: "resume" }); clearTimeout(watchdog); watchdog = setTimeout(() => { stop(); fail("朗读等待超时，请重试。") }, 90_000) }; update(active) }
-  function seek() { holding = false; ownPause = false; stop(); spokenStart = undefined; active = undefined }
+  function seek() { holding = false; ownPause = false; stop(); spokenCue = undefined; active = undefined }
   function end() { holding = false; stop(); restoreMute() }
-  function rateChange() { stop(); spokenStart = undefined; update(active) }
+  function rateChange() { stop(); spokenCue = undefined; update(active) }
   port.onMessage.addListener(m => {
     if (disposed) return
     if (m.type === "interrupted" && !m.id) { fail("另一个视频正在朗读。重新开启此视频的朗读即可切回。"); return }
@@ -49,11 +54,11 @@ export function createSpeechReader(video: HTMLVideoElement, settings: WebTransla
     if (m.type === "start") mute()
     if (["end", "error", "interrupted", "cancelled"].includes(m.type)) {
       speakingId = undefined; clearTimeout(watchdog)
-      if (m.type === "error") fail(m.error || "系统朗读失败。")
+      if (m.type === "error") fail(m.error || "译文朗读失败。")
       else { restoreMute(); resumeVideo() }
     }
   })
-  port.onDisconnect.addListener(() => { if (!disposed) fail("朗读连接已断开，请重新开启系统朗读。") })
+  port.onDisconnect.addListener(() => { if (!disposed) fail("朗读连接已断开，请重新开启译文朗读。") })
   video.addEventListener("timeupdate", tick)
   video.addEventListener("pause", pause)
   video.addEventListener("play", play)

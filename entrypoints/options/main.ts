@@ -1,4 +1,5 @@
 import { $, rpc, languages, status, busy } from "../../src/shared/ui"
+import { initTtsSettings } from "./tts"
 import { PROVIDERS, type ProviderConfig, type Protocol } from "../../src/shared/provider-config"
 const preset = $<HTMLSelectElement>("preset")
 const language = $<HTMLSelectElement>("targetLang")
@@ -91,9 +92,8 @@ async function saveSpeech() {
 language.onchange = () => { renderVoices(); void saveSpeech().catch(e => status(e.message, true)) }
 for (const id of ["voice", "rate", "mute", "wait"]) $(id).onchange = () => { void saveSpeech().catch(e => status(e.message, true)) }
 $("rate").oninput = () => { $("rateValue").textContent = `${Number($<HTMLInputElement>("rate").value).toFixed(1)}×` }
-$("preview").onclick = () => void busy($<HTMLButtonElement>("preview"), async () => { await rpc("PREVIEW_VOICE", { voiceName: $<HTMLSelectElement>("voice").value, lang: language.value, rate: Number($<HTMLInputElement>("rate").value) }); status("正在试听本机声音。") })
-$("stop").onclick = () => { void rpc("STOP_VOICE").then(() => status("试听已停止。"), e => status(e.message, true)) }
 void (async () => {
+  await initTtsSettings()
   const [c, s, v] = await Promise.all([rpc("GET_CONFIG"), rpc("TR_GET_SETTINGS"), rpc("GET_VOICES")])
   showConfig(c); language.value = s.targetLang; voices = v.voices; renderVoices(s.voiceName)
   $<HTMLInputElement>("rate").value = String(s.speechRate); $("rateValue").textContent = `${s.speechRate.toFixed(1)}×`

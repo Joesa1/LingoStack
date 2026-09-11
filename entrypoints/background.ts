@@ -6,7 +6,9 @@ import { createPageModeController } from "../src/background/page-mode-controller
 import { ProviderError, complete, listModels, translate } from "../src/background/provider"
 import { PROVIDER_KEY, EMPTY_PROVIDER, validateProvider, type ProviderConfig } from "../src/shared/provider-config"
 import { readSettings, writeSettings, SETTINGS_KEY } from "../src/shared/settings-store"
-import { registerSpeech, stopSpeech, previewSpeech, localVoices } from "../src/background/speech"
+import { registerSpeech, stopSpeech, previewSpeech, localVoices, savedTts } from "../src/background/speech"
+import { defaultTts, TTS_KEY, TTS_PROVIDERS, validateTts } from "../src/shared/tts-config"
+import { listTtsVoices } from "../src/background/tts-provider"
 import * as limits from "../src/shared/translate-config"
 
 type VideoState = { subtitlesEnabled: boolean; speechEnabled: boolean }
@@ -72,8 +74,30 @@ export default defineBackground(() => {
     if (m.type === "DELETE_CONFIG") { await chrome.storage.local.remove(PROVIDER_KEY); await refreshNamespace(); return { deleted: true } }
     if (m.type === "TEST_CONFIG") return { text: await complete(validateProvider(m.config), "Translate the user's text to Simplified Chinese. Return only the translation.", "Translation is ready.") }
     if (m.type === "LIST_MODELS") return { models: await listModels(m.config) }
+    if (m.type === "GET_TTS_CONFIG") {
+      const stored = (await chrome.storage.local.get(TTS_KEY))[TTS_KEY]
+      const id = Object.hasOwn(TTS_PROVIDERS, m.provider) ? m.provider : stored?.active ?? "system"
+      return stored?.profiles?.[id] ?? defaultTts(id)
+    }
+    if (m.type === "SAVE_TTS_CONFIG" || m.type === "DELETE_TTS_CONFIG") {
+      const stored = (await chrome.storage.local.get(TTS_KEY))[TTS_KEY] ?? { active: "system", profiles: {} }
+      if (m.type === "SAVE_TTS_CONFIG") {
+        const config = validateTts(m.config)
+        stored.profiles[config.provider] = config; stored.active = config.provider
+      } else {
+        if (!Object.hasOwn(TTS_PROVIDERS, m.provider)) throw new Error("未知朗读服务商。")
+        delete stored.profiles[m.provider]
+        if (stored.active === m.provider) stored.active = "system"
+      }
+      stopSpeech()
+      await chrome.storage.local.set({ [TTS_KEY]: stored })
+      const settings = await writeSettings(chrome.storage.local, { ttsRevision: crypto.randomUUID() })
+      await chrome.storage.session.set({ [SETTINGS_KEY]: settings })
+      return { saved: true }
+    }
+    if (m.type === "LIST_TTS_VOICES") return listTtsVoices(m.config)
     if (m.type === "GET_VOICES") return { voices: await localVoices() }
-    if (m.type === "PREVIEW_VOICE") { await previewSpeech(m.voiceName, m.lang, m.rate); return { playing: true } }
+    if (m.type === "PREVIEW_VOICE") { await previewSpeech(typeof m.voiceName === "string" ? m.voiceName : "", typeof m.lang === "string" ? m.lang : "zh-CN", m.rate, m.config); return { playing: true } }
     if (m.type === "STOP_VOICE") { stopSpeech(); return { stopped: true } }
     if (m.type === "TR_UPDATE_SETTINGS") {
       const settings = await writeSettings(chrome.storage.local, m.patch ?? {})
@@ -98,6 +122,7 @@ export default defineBackground(() => {
       if (m.speechEnabled === true) next.subtitlesEnabled = true
       if (!next.subtitlesEnabled) next.speechEnabled = false
       if (next.subtitlesEnabled) await provider()
+      if (next.speechEnabled) await savedTts()
       const states = (await chrome.storage.session.get("videoTabs")).videoTabs ?? {}
       states[String(tabId)] = next
       await chrome.storage.session.set({ videoTabs: states })
@@ -107,7 +132,7 @@ export default defineBackground(() => {
     }
     throw new Error("未知操作。")
   }
-  const handled = new Set(["TR_GET_SETTINGS", "GET_CONFIG", "SAVE_CONFIG", "DELETE_CONFIG", "TEST_CONFIG", "LIST_MODELS", "GET_VOICES", "PREVIEW_VOICE", "STOP_VOICE", "TR_UPDATE_SETTINGS", "TR_PAGE_ACTION", "VIDEO_TOGGLE"])
+  const handled = new Set(["TR_GET_SETTINGS", "GET_CONFIG", "SAVE_CONFIG", "DELETE_CONFIG", "TEST_CONFIG", "LIST_MODELS", "GET_TTS_CONFIG", "SAVE_TTS_CONFIG", "DELETE_TTS_CONFIG", "LIST_TTS_VOICES", "GET_VOICES", "PREVIEW_VOICE", "STOP_VOICE", "TR_UPDATE_SETTINGS", "TR_PAGE_ACTION", "VIDEO_TOGGLE"])
   chrome.runtime.onMessage.addListener((m, sender, reply) => {
     if (!m || !handled.has(m.type)) return
     void handle(m, sender).then(reply).catch(error => reply({ error: error instanceof Error ? error.message : "操作失败，请重试。" }))

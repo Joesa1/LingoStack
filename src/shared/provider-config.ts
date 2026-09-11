@@ -1,7 +1,6 @@
 export type Protocol = "openai-compatible" | "openai-responses" | "anthropic" | "gemini"
 export type ProviderConfig = { preset: string; protocol: Protocol; baseUrl: string; model: string; apiKey: string }
 
-// Protocol families and base URL conventions extracted from DimAgent's built-in drivers.
 export const PROVIDERS: Record<string, { name: string; protocol: Protocol; baseUrl: string }> = {
   custom: { name: "自定义 / 中转服务", protocol: "openai-compatible", baseUrl: "" },
   deepseek: { name: "DeepSeek", protocol: "openai-compatible", baseUrl: "https://api.deepseek.com/v1" },

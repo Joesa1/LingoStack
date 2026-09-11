@@ -436,7 +436,7 @@ export class TranslateBatcher {
             mode: context.mode,
           })
           return { result, units: requestedUnits }
-        }, cancellation.signal)
+        }, cancellation.signal, context.selection !== undefined)
       } catch (error) {
         if (error instanceof QueueCancelledError && this.activeUnits(units).length === 0) return undefined
         const classified = classifyTransportError(error)

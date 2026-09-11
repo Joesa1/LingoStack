@@ -6,11 +6,13 @@ import assert from 'node:assert/strict'
 import { chromium } from 'playwright'
 const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'lingo-check-'))
 const extension = path.resolve('dist/chrome')
+let translationRequests = 0
 let testMode = 'success'
 let modelsMode = 'success'
 const server = http.createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
   if (req.url === '/v1/chat/completions') {
+    translationRequests++
     await new Promise(resolve => setTimeout(resolve, 400))
     if (testMode === 'error') { res.writeHead(401); res.end('{}'); return }
     let raw = ''; for await (const chunk of req) raw += chunk
@@ -116,6 +118,34 @@ try {
   await page.waitForFunction(() => [...document.querySelectorAll('p')].at(-1).textContent.includes('你好'))
   await worker.evaluate(async tabId => chrome.tabs.sendMessage(tabId,{type:'TR_SET_MODE', mode:'off',targetLang:'zh-CN',generation:0}),tabId)
   assert.equal(await page.locator('#source').textContent(), 'Hello world. This paragraph should be translated.')
+  const cdp = await context.newCDPSession(page)
+  async function shadowText() {
+    const { root } = await cdp.send('DOM.getDocument', { depth: -1, pierce: true })
+    const collect = node => [node.nodeValue, ...(node.children ?? []).flatMap(collect), ...(node.shadowRoots ?? []).flatMap(collect)]
+    return collect(root).join(' ')
+  }
+  async function lookupSelection() {
+    await page.locator('#source').click({ clickCount: 3, position: { x: 50, y: 8 } })
+    const trigger = page.locator('html > div[style*="2147483647"]')
+    await trigger.waitFor({ state: 'visible' })
+    assert.match(await shadowText(), /译伴翻译/)
+    await trigger.click()
+    const deadline = Date.now() + 5000
+    while (Date.now() < deadline) {
+      const text = await shadowText()
+      if (text.includes('你好，世界。')) return
+      await page.waitForTimeout(100)
+    }
+    throw new Error('Selection translation did not render')
+  }
+  const beforeSelection = translationRequests
+  await lookupSelection()
+  assert.equal(translationRequests, beforeSelection + 1)
+  await page.screenshot({ path: 'test-results/selection.png' })
+  await page.keyboard.press('Escape')
+  await lookupSelection()
+  assert.equal(translationRequests, beforeSelection + 1, 'Repeated selection should use the local cache')
+  await page.keyboard.press('Escape')
   const popup = await context.newPage(); await popup.goto(`chrome-extension://${extensionId}/popup.html`)
   await popup.locator('#status').filter({hasText:'模型'}).waitFor()
   await popup.screenshot({path:'test-results/popup.png',fullPage:true})

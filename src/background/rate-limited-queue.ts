@@ -1,9 +1,8 @@
 /**
- * Generic FIFO queue capping concurrent async tasks at `maxInflight`.
+ * Concurrency-limited queue with priority for interactive selection requests.
  *
  * Pure — no chrome API dependency. Used to cap `translate` RPCs in flight
- * (README §7.5: `MAX_INFLIGHT ~3`). V1 accepts plain FIFO fairness across
- * tabs (README §7.5 known limitation): no per-tab round-robin.
+ * (README §7.5: `MAX_INFLIGHT ~3`). Waiting tasks remain FIFO within each priority. Running tasks are never interrupted.
  */
 export class QueueCancelledError extends Error {
   constructor() {
@@ -13,6 +12,7 @@ export class QueueCancelledError extends Error {
 }
 
 type WaitingEntry = {
+  priority: boolean
   start: () => void
   cancel: () => void
 }
@@ -27,8 +27,8 @@ export class RateLimitedQueue {
     return this.running
   }
 
-  async enqueue<T>(task: () => Promise<T>, signal?: AbortSignal): Promise<T> {
-    await this.acquire(signal)
+  async enqueue<T>(task: () => Promise<T>, signal?: AbortSignal, priority = false): Promise<T> {
+    await this.acquire(signal, priority)
     try {
       if (signal?.aborted === true) throw new QueueCancelledError()
       return await task()
@@ -37,7 +37,7 @@ export class RateLimitedQueue {
     }
   }
 
-  private acquire(signal?: AbortSignal): Promise<void> {
+  private acquire(signal: AbortSignal | undefined, priority: boolean): Promise<void> {
     if (signal?.aborted === true) return Promise.reject(new QueueCancelledError())
     if (this.running < this.maxInflight) {
       this.running += 1
@@ -45,6 +45,7 @@ export class RateLimitedQueue {
     }
     return new Promise((resolve, reject) => {
       const entry: WaitingEntry = {
+        priority,
         start: () => {
           signal?.removeEventListener("abort", entry.cancel)
           this.running += 1
@@ -57,7 +58,9 @@ export class RateLimitedQueue {
         },
       }
       signal?.addEventListener("abort", entry.cancel, { once: true })
-      this.waiting.push(entry)
+      const index = priority ? this.waiting.findIndex(item => !item.priority) : -1
+      if (index < 0) this.waiting.push(entry)
+      else this.waiting.splice(index, 0, entry)
     })
   }
 

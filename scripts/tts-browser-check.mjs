@@ -1,0 +1,123 @@
+import { chromium } from 'playwright'
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import os from 'node:os'
+import assert from 'node:assert/strict'
+const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'lingo-cloud-tts-'))
+const extension = path.resolve('dist/chrome')
+const context = await chromium.launchPersistentContext(profile, { channel: 'chromium', headless: true, args: ['--mute-audio', `--disable-extensions-except=${extension}`, `--load-extension=${extension}`] })
+try {
+  const worker = context.serviceWorkers()[0] ?? await context.waitForEvent('serviceworker')
+  const id = new URL(worker.url()).host
+  // Real, playable PCM WAV; only the paid provider's HTTP boundary is substituted.
+  const samples = 24000 * 2; const wav = Buffer.alloc(44 + samples * 2)
+  wav.write('RIFF'); wav.writeUInt32LE(wav.length - 8, 4); wav.write('WAVEfmt ', 8); wav.writeUInt32LE(16, 16); wav.writeUInt16LE(1, 20); wav.writeUInt16LE(1, 22); wav.writeUInt32LE(24000, 24); wav.writeUInt32LE(48000, 28); wav.writeUInt16LE(2, 32); wav.writeUInt16LE(16, 34); wav.write('data', 36); wav.writeUInt32LE(samples * 2, 40)
+  for (let i = 0; i < samples; i++) wav.writeInt16LE(Math.round(100 * Math.sin(i * Math.PI * 440 / 24000)), 44 + i * 2)
+  await worker.evaluate(({ base64 }) => {
+    const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0))
+    const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('')
+    globalThis.ttsRequests = []; globalThis.audioCommands = []; globalThis.audioEvents = []; globalThis.ttsMode = 'success'; globalThis.ttsDelay = 0
+    const originalFetch = globalThis.fetch.bind(globalThis)
+    globalThis.fetch = async (url, init = {}) => {
+      if (!/dashscope|tts\.speech\.microsoft|api\.minimax/.test(String(url))) return originalFetch(url, init)
+      globalThis.ttsRequests.push({ url: String(url), body: init.body, headers: init.headers })
+      if (globalThis.ttsDelay) await new Promise((resolve, reject) => { const timer = setTimeout(resolve, globalThis.ttsDelay); init.signal?.addEventListener('abort', () => { clearTimeout(timer); reject(init.signal.reason) }, { once: true }) })
+      if (globalThis.ttsMode === 'error') return new Response(JSON.stringify({ message: 'private-test-key' }), { status: 401 })
+      if (String(url).endsWith('/voices/list')) return Response.json([{ ShortName: 'zh-CN-XiaoxiaoNeural', LocalName: '晓晓', Locale: 'zh-CN', StyleList: ['chat', 'gentle'] }, { ShortName: 'en-US-JennyNeural', LocalName: 'Jenny', Locale: 'en-US' }])
+      if (String(url).endsWith('/get_voice')) return Response.json({ base_resp: { status_code: 0 }, system_voice: [{ voice_id: 'Chinese (Mandarin)_Reliable_Executive', voice_name: '沉稳高管' }, { voice_id: 'Chinese (Mandarin)_News_Anchor', voice_name: '新闻女声' }] })
+      if (String(url).endsWith('/t2a_v2')) return Response.json({ base_resp: { status_code: 0 }, data: { audio: hex } })
+      if (String(url).includes('/multimodal-generation/')) return Response.json({ output: { audio: { url: 'https://dashscope-result-bj.oss-cn-beijing.aliyuncs.com/fixture.wav' } } })
+      return new Response(bytes, { headers: { 'Content-Type': 'audio/wav' } })
+    }
+    const send = chrome.runtime.sendMessage.bind(chrome.runtime)
+    chrome.runtime.sendMessage = async m => {
+      if (m.type === 'LINGO_AUDIO') { globalThis.audioCommands.push({ action: m.action, id: m.id, paused: m.paused }); const r = await send(m); if (m.action === 'play') globalThis.audioEvents.push({ type: r?.ended ? 'end' : 'cancelled', id: m.id }); return r }
+      return send(m)
+    }
+    chrome.runtime.onMessage.addListener(m => { if (m.type === 'LINGO_AUDIO_EVENT') globalThis.audioEvents.push({ type: m.event, id: m.id }) })
+  }, { base64: wav.toString('base64') })
+  const page = await context.newPage(); await page.goto(`chrome-extension://${id}/options.html`)
+  await page.locator('#status').filter({ hasText: '填写' }).waitFor()
+  assert.equal(await page.locator('#ttsProvider option').count(), 4)
+  for (const provider of ['dashscope', 'azure', 'minimax']) {
+    await page.locator('#ttsProvider').selectOption(provider)
+    await page.waitForTimeout(150)
+    assert.equal(await page.locator('#ttsKey').inputValue(), '')
+    await page.locator('#ttsKey').fill(`private-test-key-${provider}`)
+    await page.locator('#ttsLoadVoices').click()
+    await page.locator('#ttsVoicesStatus[data-state=success]').waitFor()
+    assert.ok(await page.locator('#ttsVoiceSelect option').count() > 1)
+    await page.locator('#preview').click()
+    await page.locator('#ttsTestStatus[data-state=success]').waitFor({ timeout: 10000 })
+    await page.locator('#ttsSave').click()
+    await page.locator('#ttsSaveStatus[data-state=success]').waitFor()
+  }
+  await page.locator('#ttsProvider').selectOption('dashscope'); await page.waitForTimeout(100)
+  assert.equal(await page.locator('#ttsKey').inputValue(), 'private-test-key-dashscope')
+  await worker.evaluate(() => { globalThis.ttsMode = 'error' })
+  await page.locator('#preview').click(); await page.locator('#ttsTestStatus[data-state=error]').waitFor()
+  assert.match(await page.locator('#ttsTestStatus').textContent(), /401/)
+  assert.ok(!(await page.locator('#ttsTestStatus').textContent()).includes('private-test-key'))
+  // Stopping while generation is pending must not play later or report success.
+  await worker.evaluate(() => { globalThis.ttsMode = 'success'; globalThis.ttsDelay = 1000; globalThis.audioCommands = [] })
+  await page.locator('#preview').click(); await page.locator('#ttsTestStatus[data-state=pending]').waitFor()
+  await page.locator('#stop').click(); await page.waitForTimeout(1200)
+  assert.match(await page.locator('#ttsTestStatus').textContent(), /已停止/)
+  assert.equal(await worker.evaluate(() => globalThis.audioCommands.filter(c => c.action === 'play').length), 0)
+  // An old response must not overwrite a newly selected provider's feedback.
+  await page.locator('#preview').click(); await page.locator('#ttsProvider').selectOption('azure'); await page.waitForTimeout(1200)
+  assert.equal(await page.locator('#ttsTestStatus').isHidden(), true)
+  assert.equal(await page.locator('#ttsKey').inputValue(), 'private-test-key-azure')
+  await worker.evaluate(() => { globalThis.ttsDelay = 0 })
+  await page.locator('#ttsSave').click(); await page.locator('#ttsSaveStatus[data-state=success]').waitFor()
+  await page.reload(); await page.locator('#status').filter({ hasText: '填写' }).waitFor()
+  assert.equal(await page.locator('#ttsProvider').inputValue(), 'azure')
+  assert.equal(await page.locator('#ttsKey').inputValue(), 'private-test-key-azure')
+  // Let the real offscreen Audio element complete and verify actual playing/end events.
+  await worker.evaluate(() => { globalThis.audioEvents = [] })
+  await page.locator('#preview').click(); await page.locator('#ttsTestStatus[data-state=success]').waitFor()
+  await page.waitForTimeout(2300)
+  const events = await worker.evaluate(() => globalThis.audioEvents)
+  assert.ok(events.some(e => e.type === 'start')); assert.ok(events.some(e => e.type === 'end'))
+  const stored = await page.evaluate(() => chrome.storage.session.get(null))
+  assert.ok(!JSON.stringify(stored).includes('private-test-key'))
+  await fs.mkdir('test-results', { recursive: true }); await page.screenshot({ path: 'test-results/cloud-tts-settings.png', fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 }); await page.screenshot({ path: 'test-results/cloud-tts-mobile.png', fullPage: true })
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+  await page.locator('#ttsDelete').click(); await page.locator('#ttsSaveStatus[data-state=success]').waitFor()
+  await page.reload(); await page.locator('#status').filter({ hasText: '填写' }).waitFor()
+  assert.equal(await page.locator('#ttsProvider').inputValue(), 'system')
+  // Exercise the real content-script port during synthesis and playback.
+  await page.evaluate(() => chrome.runtime.sendMessage({ type: 'SAVE_TTS_CONFIG', config: { provider: 'minimax', apiKey: 'private-test-key-minimax', region: 'cn', model: 'speech-2.8-turbo', voice: 'Chinese (Mandarin)_Reliable_Executive', style: '' } }))
+  await context.route('https://www.youtube.com/watch?v=ttsLifecycle', r => r.fulfill({ contentType: 'text/html', body: '<!doctype html><html><body><p>Speech lifecycle fixture</p></body></html>' }))
+  const fixture = await context.newPage(); await fixture.goto('https://www.youtube.com/watch?v=ttsLifecycle')
+  const tabId = await worker.evaluate(async () => (await chrome.tabs.query({})).find(t => t.url?.includes('ttsLifecycle')).id)
+  await worker.evaluate(async tabId => { await chrome.storage.session.set({ videoTabs: { [tabId]: { speechEnabled: true, subtitlesEnabled: true } } }); globalThis.ttsDelay = 700; globalThis.audioEvents = []; globalThis.audioCommands = [] }, tabId)
+  const cdp = await context.newCDPSession(fixture); const worlds = []
+  cdp.on('Runtime.executionContextCreated', e => worlds.push(e.context)); await cdp.send('Runtime.enable')
+  const isolated = worlds.find(c => c.origin === `chrome-extension://${id}`)
+  assert.ok(isolated, 'Extension isolated world missing')
+  const run = expression => cdp.send('Runtime.evaluate', { contextId: isolated.id, expression, awaitPromise: true, returnByValue: true })
+  await run('globalThis.speechPort = chrome.runtime.connect({name:"lingo-speech"}); globalThis.portEvents=[]; speechPort.onMessage.addListener(m=>portEvents.push(m));')
+  await run('speechPort.postMessage({type:"speak",id:"pending-pause",text:"测试暂停中的云端生成。"}); speechPort.postMessage({type:"pause"});')
+  await fixture.waitForTimeout(1100)
+  assert.equal(await worker.evaluate(() => globalThis.audioEvents.filter(e => e.type === 'start').length), 0)
+  assert.ok(await worker.evaluate(() => globalThis.audioCommands.some(c => c.action === 'play' && c.paused)))
+  await run('speechPort.postMessage({type:"resume"})'); await fixture.waitForTimeout(300)
+  assert.ok(await worker.evaluate(() => globalThis.audioEvents.some(e => e.type === 'start')))
+  await run('speechPort.postMessage({type:"pause"})'); await fixture.waitForTimeout(2300)
+  assert.equal(await worker.evaluate(() => globalThis.audioEvents.filter(e => e.type === 'end').length), 0)
+  await run('speechPort.postMessage({type:"resume"})'); await fixture.waitForTimeout(2100)
+  assert.ok((await run('portEvents')).result.value.some(e => e.id === 'pending-pause' && e.type === 'end'))
+  await worker.evaluate(() => { globalThis.audioCommands = [] })
+  await run('speechPort.postMessage({type:"speak",id:"cancel-pending",text:"不应该播放的旧句子。"}); speechPort.postMessage({type:"stop"});')
+  await fixture.waitForTimeout(1100)
+  assert.equal(await worker.evaluate(() => globalThis.audioCommands.filter(c => c.action === 'play').length), 0)
+  await run('speechPort.postMessage({type:"speak",id:"disconnect",text:"关闭页面后不能继续朗读。"})')
+  await fixture.waitForTimeout(100); await fixture.close(); await page.waitForTimeout(900)
+  assert.equal(await worker.evaluate(() => globalThis.audioCommands.filter(c => c.action === 'play').length), 0)
+  console.log('Cloud lifecycle: pause while generating, resume, pause during playback, completion, cancel pending and tab close: PASS')
+  const manifest = await page.evaluate(() => chrome.runtime.getManifest())
+  assert.ok(manifest.permissions.includes('offscreen'))
+  console.log('Cloud TTS: three provider settings, real audio start/end, voice lists, profile persistence, error redaction, pending cancellation, stale responses, session credential isolation, deletion and responsive layout: PASS')
+} finally { await context.close(); await fs.rm(profile, { recursive: true, force: true }) }

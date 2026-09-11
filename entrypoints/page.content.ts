@@ -284,7 +284,7 @@ export default defineContentScript({
     // Debug hook, dev channel only: exercise the full round trip by hand —
     // content walk -> Port -> background batcher -> extension -> backfill.
     if (import.meta.env.DEV) {
-      ;(globalThis as unknown as { __dimWebTranslateDebug: unknown }).__dimWebTranslateDebug = {
+      ;(globalThis as unknown as { __lingoWebTranslateDebug: unknown }).__lingoWebTranslateDebug = {
         walker,
         client,
         watcher,

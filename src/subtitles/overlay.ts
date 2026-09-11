@@ -25,6 +25,7 @@
  * Based on: docs/packages/web-translate/README.md §7.9 (D17).
  */
 import type { SubtitleCue, SubtitleOverlayState } from "./types"
+import { normalizeText } from "../shared/text-normalize"
 
 export const HIDE_NATIVE_CAPTIONS_STYLE_ID = "lingo-tr-hide-native-captions"
 export const OVERLAY_HOST_ID = "lingo-tr-subtitles-host"
@@ -110,6 +111,9 @@ export function mountSubtitleOverlay(playerContainer: HTMLElement): SubtitleOver
 
   const host = doc.createElement("div")
   host.id = OVERLAY_HOST_ID
+  host.translate = false
+  host.className = "notranslate"
+  host.setAttribute("data-lingo-tr-skip", "")
   host.style.cssText = "position:absolute;inset:0;pointer-events:none;z-index:9999;"
   const shadow = host.attachShadow({ mode: "open" })
 
@@ -173,7 +177,7 @@ export function mountSubtitleOverlay(playerContainer: HTMLElement): SubtitleOver
       originalLine.textContent = cue.text
       const translation = cue.translation
       // Identical translation = passthrough / model echo — one line is enough.
-      if (translation === undefined || translation.length === 0 || translation === cue.text) {
+      if (translation === undefined || translation.length === 0 || normalizeText(translation) === normalizeText(cue.text)) {
         translationLine.hidden = true
         translationLine.textContent = ""
       } else {

@@ -20,7 +20,7 @@ export default defineContentScript({
     async function ensure(force = false) {
       const videoId = location.pathname === "/watch" ? new URLSearchParams(location.search).get("v") : null
       if (!enabled || !videoId || ctx.isInvalid) { stop(); return }
-      const key = JSON.stringify([videoId, settings.targetLang, speechEnabled, settings.voiceName, settings.speechRate, settings.muteOriginal, settings.waitForSpeech])
+      const key = JSON.stringify([videoId, settings.targetLang, speechEnabled, settings.ttsRevision, settings.voiceName, settings.speechRate, settings.muteOriginal, settings.waitForSpeech])
       if (!force && identity === key) return
       stop()
       identity = key

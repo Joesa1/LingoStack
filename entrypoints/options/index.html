@@ -10,11 +10,28 @@
 <details id="advanced"><summary>接口地址与协议</summary><label>API 地址<input id="baseUrl" type="url" placeholder="https://api.example.com/v1" spellcheck="false"></label><label>接口协议<select id="protocol"><option value="openai-compatible">兼容聊天接口 · Chat Completions</option><option value="openai-responses">OpenAI Responses</option><option value="anthropic">Anthropic Messages</option><option value="gemini">Google Gemini</option></select></label><p class="hint">中转服务选择其文档要求的协议。API 地址可以填写到 /v1，不必包含 /chat/completions。</p></details>
 <div class="two actions"><button class="primary" id="save" type="submit">保存配置</button><button id="test" type="button">测试翻译</button></div><p id="testStatus" class="feedback" role="status" aria-live="polite" hidden></p></form>
 <p class="hint privacy">密钥保存在此浏览器本机，不同步到云端，不发送给网页。所选文字和字幕会发给你配置的模型服务商。测试翻译也会产生一次 API 请求。</p><button id="delete" class="quiet danger">删除保存的 API 配置</button></section>
-<section><div class="section-label">字幕朗读</div><h2>用本机声音听译文</h2><p class="hint">Mac 使用系统提供的声音，不需要另付语音 API 费用。</p>
-<label>目标语言<select id="targetLang"></select></label><label>朗读声音<select id="voice"><option value="">按目标语言自动选择</option></select></label><label>语速 <output id="rateValue">1.0×</output><input id="rate" type="range" min="0.5" max="2" step="0.1" value="1"></label>
-<div class="two"><button id="preview">试听声音</button><button id="stop">停止试听</button></div>
+<section><div class="section-label">字幕朗读</div><h2>选一种你愿意听的声音</h2><p class="hint">系统声音免费；云端声音使用你自己的语音服务账户，与翻译模型分别配置。</p>
+<label>朗读服务商<select id="ttsProvider"></select></label>
+<p class="hint" id="ttsHelp"></p><p><a id="ttsRegister" target="_blank" rel="noopener noreferrer" hidden>注册 / 开通服务与充值 ↗</a></p>
+<div id="ttsCloud" hidden>
+<label id="ttsRegionLabel">服务区域<select id="ttsRegion"><option value="beijing">北京 · 国内</option><option value="singapore">新加坡 · 国际</option></select></label>
+<label id="azureRegionLabel" hidden>Azure 资源区域<input id="azureRegion" placeholder="例如 eastus" autocomplete="off" spellcheck="false"></label>
+<label>语音 API Key<input id="ttsKey" type="password" autocomplete="off" spellcheck="false" placeholder="填写此朗读服务的密钥"></label>
+<label id="ttsModelLabel">语音模型<select id="ttsModel"></select></label>
+<p class="hint" id="ttsModelHint">这里是已适配的模型预设，不是账户权限列表；请试听确认可用。</p>
+<label>音色列表<div class="input-action"><select id="ttsVoiceSelect"></select><button type="button" id="ttsLoadVoices">获取音色</button></div></label>
+<p class="feedback" id="ttsVoicesStatus" role="status" aria-live="polite" hidden></p>
+<label>音色 ID<input id="ttsVoice" autocomplete="off" spellcheck="false" placeholder="可从列表选择，也可手动填写"></label>
+<label id="ttsStyleLabel">朗读风格<select id="ttsStyle"></select></label>
+</div>
+<label>目标语言<select id="targetLang"></select></label><label id="systemVoiceLabel">本机声音<select id="voice"><option value="">按目标语言自动选择</option></select></label><label>语速 <output id="rateValue">1.0×</output><input id="rate" type="range" min="0.5" max="2" step="0.1" value="1"></label>
+<div class="two"><button id="preview">试听并测试</button><button id="stop">停止试听</button></div>
+<p id="ttsTestStatus" class="feedback" role="status" aria-live="polite" hidden></p>
+<div class="two actions"><button id="ttsSave" class="primary">保存朗读配置</button><button id="ttsDelete" class="quiet danger">删除此服务密钥</button></div>
+<p id="ttsSaveStatus" class="feedback" role="status" aria-live="polite" hidden></p>
+<p class="hint">云端试听会消耗语音额度。密钥只保存在本机扩展中；译文会发给所选语音服务商。先按短句生成音频再播放，可能稍有等待。</p>
 <label class="row">朗读时静音视频原声<input id="mute" type="checkbox" role="switch"></label><label class="row">长句读完再继续视频<input id="wait" type="checkbox" role="switch"></label><p class="hint">开启后，长句来不及读完时会暂缓视频；关闭后保持视频连续播放，过时的朗读会被替换。拖动进度会清空旧朗读。</p>
 <div class="reading-sample"><span>双语字幕预览</span><strong>世界比你想象的更广阔。</strong><p>The world is wider than you think.</p></div>
 <p class="hint">若没有合适的声音，请在 macOS 系统设置的朗读功能中下载对应语言声音，再重新打开此页。视频中是否开启字幕与朗读，在扩展弹窗里控制。</p></section></div>
-<footer><p id="status" role="status" aria-live="polite">正在读取设置…</p><span class="shortcut">译伴 1.0.1</span></footer>
+<footer><p id="status" role="status" aria-live="polite">正在读取设置…</p><span class="shortcut">译伴 1.1.0</span></footer>
 </main><script type="module" src="main.ts"></script></body></html>

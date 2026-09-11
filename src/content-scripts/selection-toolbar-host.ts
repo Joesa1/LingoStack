@@ -162,7 +162,7 @@ export function createSelectionToolbarHost(doc: Document): SelectionToolbarHost 
   const trigger = doc.createElement("button")
   trigger.type = "button"
   trigger.className = "trigger"
-  trigger.textContent = "翻译"
+  trigger.textContent = "译伴翻译"
   trigger.title = "Translate selection"
   const bubble = doc.createElement("div")
   bubble.className = "bubble hidden"
@@ -257,7 +257,7 @@ export function createSelectionToolbarHost(doc: Document): SelectionToolbarHost 
       hideToast()
     },
     setLoading() {
-      bubblePrimary.textContent = "Translating..."
+      bubblePrimary.textContent = "译伴 · 正在翻译…"
       bubbleMeta.classList.add("hidden")
       bubbleAlternatives.classList.add("hidden")
       showBubbleForm("bubble bubble--loading")

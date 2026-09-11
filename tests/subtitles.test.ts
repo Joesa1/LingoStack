@@ -55,3 +55,67 @@ describe("displayed-caption fallback", () => {
     live.stop(); vi.useRealTimers()
   })
 })
+
+it("only translates new words in rolling captions, and resets on seeking", async () => {
+  const { watchDisplayedCaptions } = await import("../src/subtitles/live-captions")
+  vi.useFakeTimers()
+  const container = document.createElement("div")
+  container.innerHTML = '<span class="ytp-caption-segment">Welcome to this video.</span>'
+  const video = document.createElement("video")
+  Object.defineProperty(video, "paused", { value: false })
+  const translate = vi.fn(async (text: string) => `Translated: ${text}`)
+  const live = watchDisplayedCaptions({ container, video, translate, onCue: vi.fn(), onError: vi.fn() })
+  try {
+    await vi.advanceTimersByTimeAsync(500)
+    video.currentTime = 1
+    container.querySelector("span")!.textContent = 'Welcome to this video. Today we discuss science.'
+    await vi.advanceTimersByTimeAsync(500)
+    video.currentTime = 2
+    container.querySelector("span")!.textContent = 'Today we discuss science. Let us begin.'
+    await vi.advanceTimersByTimeAsync(500)
+    expect(translate.mock.calls.map(call => call[0])).toEqual(['Welcome to this video.', 'Today we discuss science.', 'Let us begin.'])
+    video.currentTime = 0
+    video.dispatchEvent(new Event("seeking"))
+    container.querySelector("span")!.textContent = 'Welcome to this video.'
+    await vi.advanceTimersByTimeAsync(500)
+    expect(translate.mock.calls.at(-1)?.[0]).toBe('Welcome to this video.')
+    expect(translate).toHaveBeenCalledTimes(4)
+  } finally { live.stop(); vi.useRealTimers() }
+})
+
+it("shows one line for a whitespace-only echo and opts the overlay out of page translation", async () => {
+  const { mountSubtitleOverlay } = await import("../src/subtitles/overlay")
+  const player = document.createElement("div")
+  document.body.append(player)
+  const overlay = mountSubtitleOverlay(player)
+  try {
+    overlay.setCue({ start: 0, end: 1000, text: 'Hello world', translation: ' Hello\nworld\u200b ' })
+    const host = player.querySelector<HTMLElement>('#lingo-tr-subtitles-host')!
+    expect(host.getAttribute('translate')).toBe('no')
+    expect(host.classList.contains('notranslate')).toBe(true)
+    expect([...host.shadowRoot!.querySelectorAll<HTMLElement>('.line')].filter(el => !el.hidden)).toHaveLength(1)
+  } finally { overlay.destroy(); player.remove() }
+})
+
+it("accepts still-visible words during a slow request without retranslating its prefix", async () => {
+  const { watchDisplayedCaptions } = await import("../src/subtitles/live-captions")
+  vi.useFakeTimers()
+  const container = document.createElement("div")
+  container.innerHTML = '<span class="ytp-caption-segment">Welcome everyone.</span>'
+  const video = document.createElement("video")
+  Object.defineProperty(video, "paused", { value: false })
+  let resolve = (_: string) => {}
+  const translate = vi.fn(() => new Promise<string>(r => { resolve = r }))
+  const onCue = vi.fn()
+  const live = watchDisplayedCaptions({ container, video, translate, onCue, onError: vi.fn() })
+  try {
+    await vi.advanceTimersByTimeAsync(500)
+    container.querySelector('span')!.textContent = 'Welcome everyone. Let us begin.'
+    await vi.advanceTimersByTimeAsync(500)
+    expect(translate).toHaveBeenCalledTimes(1)
+    resolve('欢迎大家。')
+    await vi.advanceTimersByTimeAsync(150)
+    expect(onCue.mock.calls[0]?.[0].text).toBe('Welcome everyone.')
+    expect(translate).toHaveBeenLastCalledWith('Let us begin.')
+  } finally { live.stop(); resolve('done'); vi.useRealTimers() }
+})

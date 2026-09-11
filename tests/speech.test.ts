@@ -49,3 +49,17 @@ describe("subtitle speech playback", () => {
     s.reader.destroy()
   })
 })
+
+it("does not restart overlapping duplicate text, but allows a later occurrence and seek replay", () => {
+  const s = setup()
+  const cue = { start: 0, end: 4000, text: "Hello world", translation: "你好世界" }
+  s.reader.update(cue)
+  s.reader.update({ ...cue, start: 500, text: "Hello  world", translation: "你好世界 " })
+  expect(s.messages.filter(m => m.type === "speak")).toHaveLength(1)
+  s.reader.update({ ...cue, start: 5000, end: 9000 })
+  expect(s.messages.filter(m => m.type === "speak")).toHaveLength(2)
+  s.video.dispatchEvent(new Event("seeking"))
+  s.reader.update(cue)
+  expect(s.messages.filter(m => m.type === "speak")).toHaveLength(3)
+  s.reader.destroy()
+})

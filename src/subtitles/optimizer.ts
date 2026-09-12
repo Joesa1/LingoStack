@@ -21,6 +21,14 @@ const TARGET_MAX_CJK = 25
 const TARGET_MIN_NON_CJK = 11
 const TARGET_MAX_NON_CJK = 20
 
+// YouTube's timed-text segments are display fragments, not sentence
+// boundaries. Keep a wider semantic window here so an English clause split
+// across two short cues is translated and spoken as one unit. The target
+// range below still folds very short cues, while this limit only prevents
+// genuinely long paragraphs from becoming one request.
+const SEMANTIC_MAX_CJK = 60
+const SEMANTIC_MAX_NON_CJK = 32
+
 /** Filler words that often open a new spoken clause — used only in the aggressive second pass. */
 const PAUSE_WORDS = new Set([
   "actually", "also", "although", "and", "anyway", "as", "basically", "because", "but",
@@ -53,7 +61,7 @@ function processCues(cues: SubtitleCue[], language: string, usePause: boolean): 
   let bufferLength = 0
   const isCjk = isCjkLanguage(language)
   const separator = isCjk ? "" : " "
-  const maxLength = getMaxLength(isCjk)
+  const maxLength = Math.max(getMaxLength(isCjk), isCjk ? SEMANTIC_MAX_CJK : SEMANTIC_MAX_NON_CJK)
 
   const flushBuffer = (): void => {
     const first = buffer[0]

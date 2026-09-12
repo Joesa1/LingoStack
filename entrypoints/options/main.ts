@@ -91,14 +91,14 @@ async function saveSpeech() {
   status("朗读偏好已保存。")
 }
 language.onchange = () => { renderVoices(); void saveSpeech().catch(e => status(e.message, true)) }
-for (const id of ["voice", "rate", "mute", "wait", "speechMode"]) $(id).onchange = () => { void saveSpeech().catch(e => status(e.message, true)) }
+for (const id of ["voice", "rate", "mute", "speechMode"]) $(id).onchange = () => { void saveSpeech().catch(e => status(e.message, true)) }
 $("rate").oninput = () => { $("rateValue").textContent = `${Number($<HTMLInputElement>("rate").value).toFixed(1)}×` }
 void (async () => {
   await initTtsSettings()
   const [c, s, v] = await Promise.all([rpc("GET_CONFIG"), rpc("TR_GET_SETTINGS"), rpc("GET_VOICES")])
   showConfig(c); language.value = s.targetLang; voices = v.voices; renderVoices(s.voiceName)
   $<HTMLInputElement>("rate").value = String(s.speechRate); $("rateValue").textContent = `${s.speechRate.toFixed(1)}×`
-  $<HTMLInputElement>("mute").checked = s.muteOriginal; $<HTMLInputElement>("wait").checked = s.waitForSpeech
+  $<HTMLInputElement>("mute").checked = s.muteOriginal
   $<HTMLSelectElement>("speechMode").value = s.speechMode
   status(s.providerReady ? "配置已就绪，可返回网页开始翻译。" : "填写 API key 和模型名称，然后保存配置。")
 })().catch(e => status(e.message, true))

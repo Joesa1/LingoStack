@@ -55,13 +55,13 @@ function isQualityPoor(cues: SubtitleCue[]): boolean {
   return longCount / cues.length > QUALITY_PERCENTAGE_THRESHOLD
 }
 
-function processCues(cues: SubtitleCue[], language: string, usePause: boolean): SubtitleCue[] {
+function processCues(cues: SubtitleCue[], language: string, usePause: boolean, semantic = true): SubtitleCue[] {
   const result: SubtitleCue[] = []
   const buffer: SubtitleCue[] = []
   let bufferLength = 0
   const isCjk = isCjkLanguage(language)
   const separator = isCjk ? "" : " "
-  const maxLength = Math.max(getMaxLength(isCjk), isCjk ? SEMANTIC_MAX_CJK : SEMANTIC_MAX_NON_CJK)
+  const maxLength = semantic ? Math.max(getMaxLength(isCjk), isCjk ? SEMANTIC_MAX_CJK : SEMANTIC_MAX_NON_CJK) : getMaxLength(isCjk)
 
   const flushBuffer = (): void => {
     const first = buffer[0]
@@ -156,10 +156,10 @@ function rebalanceToTargetRange(cues: SubtitleCue[], language: string): Subtitle
   return result
 }
 
-export function optimizeCues(cues: SubtitleCue[], language: string): SubtitleCue[] {
+export function optimizeCues(cues: SubtitleCue[], language: string, semantic = true): SubtitleCue[] {
   if (cues.length === 0) return []
-  let result = processCues(cues, language, false)
+  let result = processCues(cues, language, false, semantic)
   // Too many wall-of-text lines -> redo with aggressive pause-word splitting.
-  if (isQualityPoor(result)) result = processCues(cues, language, true)
+  if (isQualityPoor(result)) result = processCues(cues, language, true, semantic)
   return rebalanceToTargetRange(result, language)
 }

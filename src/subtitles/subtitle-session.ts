@@ -96,7 +96,7 @@ export function createSubtitleSession(deps: SubtitleSessionDeps): SubtitleSessio
           deps.videoId,
         )
         if (stopped) return // toggled off / navigated away while fetching
-        cues = optimizeCues(fetched.cues, fetched.sourceLanguage)
+        cues = optimizeCues(fetched.cues, fetched.sourceLanguage, deps.settings.speechMode === "natural")
         sourceLanguage = fetched.sourceLanguage
       } catch (error) {
         if (stopped) return
@@ -136,7 +136,7 @@ export function createSubtitleSession(deps: SubtitleSessionDeps): SubtitleSessio
       // our overlay is about to take over showing them.
       overlay.hideNativeCaptions()
       const mountedOverlay = overlay
-      if (deps.speechEnabled) reader = createSpeechReader(deps.video, deps.settings, message => mountedOverlay.setState("error", message))
+      if (deps.speechEnabled) reader = createSpeechReader(deps.video, { ...deps.settings, waitForSpeech: deps.settings.speechMode === "sync" }, message => mountedOverlay.setState("error", message))
       scheduler = createSubtitleScheduler({
         video: deps.video,
         onCueChange: (cue) => { mountedOverlay.setCue(cue); reader?.update(cue) },

@@ -25,12 +25,13 @@
 <label id="ttsStyleLabel">朗读风格<select id="ttsStyle"></select></label>
 </div>
 <label>目标语言<select id="targetLang"></select></label><label id="systemVoiceLabel">本机声音<select id="voice"><option value="">按目标语言自动选择</option></select></label><label>语速 <output id="rateValue">1.0×</output><input id="rate" type="range" min="0.5" max="2" step="0.1" value="1"></label>
+<label>朗读模式<select id="speechMode"><option value="natural">自然连续：语义拼接 + 自适应语速</option><option value="sync">严格同步：按字幕边界 + 读完暂停视频</option></select></label>
 <div class="two"><button id="preview">试听并测试</button><button id="stop">停止试听</button></div>
 <p id="ttsTestStatus" class="feedback" role="status" aria-live="polite" hidden></p>
 <div class="two actions"><button id="ttsSave" class="primary">保存朗读配置</button><button id="ttsDelete" class="quiet danger">删除此服务密钥</button></div>
 <p id="ttsSaveStatus" class="feedback" role="status" aria-live="polite" hidden></p>
 <p class="hint">云端试听会消耗语音额度。密钥只保存在本机扩展中；译文会发给所选语音服务商。先按短句生成音频再播放，可能稍有等待。</p>
-<label class="row">朗读时静音视频原声<input id="mute" type="checkbox" role="switch"></label><label class="row">长句读完再继续视频<input id="wait" type="checkbox" role="switch"></label><p class="hint">开启后，长句来不及读完时会暂缓视频；关闭后保持视频连续播放，过时的朗读会被替换。拖动进度会清空旧朗读。</p>
+<label class="row">朗读时静音视频原声<input id="mute" type="checkbox" role="switch"></label><p class="hint">自然连续模式会合并被 YouTube 拆开的未完句子，并按字幕时间窗口估算语速（0.75×～1.35×）；严格同步模式保留字幕边界，读不完时暂停视频。两种模式互斥。</p>
 <div class="reading-sample"><span>双语字幕预览</span><strong>世界比你想象的更广阔。</strong><p>The world is wider than you think.</p></div>
 <p class="hint">若没有合适的声音，请在 macOS 系统设置的朗读功能中下载对应语言声音，再重新打开此页。视频中是否开启字幕与朗读，在扩展弹窗里控制。</p></section></div>
 <footer><p id="status" role="status" aria-live="polite">正在读取设置…</p><span class="shortcut">译伴 1.1.0</span></footer>

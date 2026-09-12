@@ -34,7 +34,12 @@ export function createSpeechReader(video: HTMLVideoElement, settings: WebTransla
     stop()
     spokenCue = cue
     speakingId = `${cue.start}:${Date.now()}`
-    send({ type: "speak", id: speakingId, text: cue.translation, playbackRate: video.playbackRate })
+    const windowSeconds = Math.max(0.8, (cue.end - cue.start) / 1000)
+    const words = cue.translation.trim().split(/\s+/).filter(Boolean).length
+    const chars = cue.translation.replace(/\s/g, "").length
+    const estimatedSeconds = words > 1 ? words * 0.34 : chars * 0.22
+    const adaptive = settings.speechMode === "natural" ? Math.min(1.35, Math.max(0.75, estimatedSeconds / windowSeconds)) : 1
+    send({ type: "speak", id: speakingId, text: cue.translation, playbackRate: video.playbackRate * adaptive })
     watchdog = setTimeout(() => { stop(); fail("朗读等待超时，请重新播放或更换声音。") }, 90_000)
   }
   function tick() {

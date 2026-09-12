@@ -3,9 +3,9 @@ import type { TranslateMode } from "./types"
 export const LANGUAGES: Record<string, string> = { "zh-CN": "简体中文", "zh-TW": "繁體中文", en: "English", ja: "日本語", ko: "한국어", fr: "Français", de: "Deutsch", es: "Español", ru: "Русский", ar: "العربية", pt: "Português", it: "Italiano" }
 export type WebTranslateSettings = {
   mode: TranslateMode; targetLang: string; selectionEnabled: boolean; subtitlesEnabled: boolean
-  ttsRevision: string; voiceName: string; speechRate: number; muteOriginal: boolean; waitForSpeech: boolean
+  ttsRevision: string; voiceName: string; speechRate: number; muteOriginal: boolean; waitForSpeech: boolean; speechMode: "natural" | "sync"
 }
-export const DEFAULT_SETTINGS: WebTranslateSettings = { mode: "bilingual", targetLang: "zh-CN", selectionEnabled: true, subtitlesEnabled: false, ttsRevision: "", voiceName: "", speechRate: 1, muteOriginal: true, waitForSpeech: true }
+export const DEFAULT_SETTINGS: WebTranslateSettings = { mode: "bilingual", targetLang: "zh-CN", selectionEnabled: true, subtitlesEnabled: false, ttsRevision: "", voiceName: "", speechRate: 1, muteOriginal: true, waitForSpeech: true, speechMode: "natural" }
 export const SETTINGS_KEY = "lingoSettings"
 export type StorageArea = { get(keys: string | string[]): Promise<Record<string, unknown>>; set(items: Record<string, unknown>): Promise<void> }
 export type StorageChanges = Record<string, { newValue?: unknown }>
@@ -22,6 +22,7 @@ export function parseSettings(raw: unknown): WebTranslateSettings {
     speechRate: typeof r.speechRate === "number" && Number.isFinite(r.speechRate) ? Math.min(2, Math.max(0.5, r.speechRate)) : 1,
     muteOriginal: typeof r.muteOriginal === "boolean" ? r.muteOriginal : true,
     waitForSpeech: typeof r.waitForSpeech === "boolean" ? r.waitForSpeech : true,
+    speechMode: r.speechMode === "sync" ? "sync" : "natural",
   }
 }
 export async function readSettings(storage: StorageArea): Promise<WebTranslateSettings> { return parseSettings((await storage.get(SETTINGS_KEY))[SETTINGS_KEY]) }

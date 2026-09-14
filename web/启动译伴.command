@@ -12,8 +12,8 @@ fi
 if [[ ! -x .venv/bin/python3 ]]; then
   python3 -m venv .venv || { read -r '?初始化失败，按回车关闭'; exit 1; }
 fi
-if ! .venv/bin/python3 -c 'import yt_dlp, youtube_transcript_api' 2>/dev/null; then
-  echo '首次启动：正在安装字幕获取组件，请保持联网…'
+if ! .venv/bin/python3 -c 'import yt_dlp, youtube_transcript_api, imageio_ffmpeg' 2>/dev/null; then
+  echo '首次启动 / 升级：正在安装字幕与 MP3 组件，请保持联网…'
   .venv/bin/python3 -m pip install -r requirements.txt || { read -r '?安装失败，请检查网络后重试。按回车关闭'; exit 1; }
 fi
 export SSL_CERT_FILE="$(.venv/bin/python3 -m certifi)"

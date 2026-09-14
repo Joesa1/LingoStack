@@ -1,6 +1,6 @@
 const $ = id => document.getElementById(id)
 const token = document.querySelector('meta[name=lingo-token]').content
-let providers = {}, jobs = [], revision = 0, busy = false, view = ''
+let providers = {}, ttsProviders = {}, jobs = [], revision = 0, busy = false, view = ''
 async function api(route, body) {
   const res = await fetch('/api/' + route, { method: body ? 'POST' : 'GET', headers: { 'X-Lingo-Token': token, ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) })
   const data = await res.json(); if (!res.ok) throw Error(data.error || '请求失败'); return data
@@ -63,6 +63,7 @@ function render() {
 async function refresh() {
   jobs = await api('jobs'); busy = jobs.some(j => ['fetching', 'translating'].includes(j.status)); $('start').disabled = busy
   if (jobs[0]?.status === 'complete' && !busy) message('status', '处理完成，可查看全文或下载中文 TXT。')
+  refreshAudio();
   const snapshot = JSON.stringify(jobs); if (snapshot !== view) {
     const active = jobs.find(j => ['fetching', 'translating'].includes(j.status))
     if (active) message('status', active.status === 'fetching' ? '正在自动获取字幕。' : `字幕已获取，正在翻译第 ${active.translations.length + 1} / ${active.parts.length} 段。`)
@@ -72,9 +73,82 @@ async function refresh() {
 }
 async function poll() { try { await refresh() } catch (e) { message('status', '无法连接本地服务，请重新双击启动程序并刷新页面。', true) } finally { setTimeout(poll, 2000) } }
 async function init() {
-  const data = await api('config'); providers = data.providers
+  const data = await api('config'); providers = data.providers; initAudio(data.tts)
   $('provider').replaceChildren(...Object.entries(providers).map(([id, p]) => new Option(p.name, id)))
   $('provider').value = 'deepseek'; $('provider').onchange()
   await refresh(); void poll()
 }
 void init().catch(e => message('status', '启动失败：' + e.message, true))
+
+function tts(voice = $('voiceA').value) { return { provider: $('ttsProvider').value, apiKey: $('ttsKey').value, region: $('ttsRegion').value, model: $('ttsModel').value, voice, style: $('ttsStyle').value } }
+let playerUrl = '', audioJobView = ''
+function playAudio(url) { if (playerUrl) URL.revokeObjectURL(playerUrl); playerUrl = url; $('audioPlayer').src = url; $('audioPlayer').hidden = false; $('audioPlayer').play().catch(() => {}) }
+function initAudio(data) {
+  ttsProviders = data
+  $('ttsProvider').replaceChildren(...Object.entries(data).map(([id, p]) => new Option(p.name, id)))
+  $('ttsProvider').onchange = () => {
+    const p = data[$('ttsProvider').value], c = p.defaults
+    $('ttsKey').value = ''; $('ttsHelp').textContent = p.help
+    const regions = c.provider === 'dashscope' ? [['beijing', '北京'], ['singapore', '新加坡']] : c.provider === 'minimax' ? [['cn', '国内'], ['global', '国际']] : [['eastus', '美国东部'], ['southeastasia', '东南亚'], ['westeurope', '西欧'], ['eastasia', '东亚']]
+    $('regions').replaceChildren(...regions.map(([id, name]) => new Option(name, id))); $('ttsRegion').value = c.region
+    $('ttsModel').replaceChildren(...(p.models.length ? p.models : ['']).map(id => new Option(id || 'Azure Neural', id)))
+    $('ttsStyle').replaceChildren(...(c.provider === 'dashscope' ? ['', 'chat', 'calm', 'cheerful'] : ['']).map(id => new Option(({ chat: '自然对话', calm: '平静', cheerful: '愉快' })[id] || '默认', id)))
+    $('ttsStyle').value = c.style
+    setVoices(p.voices); $('voiceA').value = c.voice; $('voiceB').value = p.voices.find(v => v.id !== c.voice)?.id || c.voice
+  }
+  $('ttsProvider').onchange()
+}
+function setVoices(voices) { $('voices').replaceChildren(...voices.map(v => new Option(v.name, v.id))) }
+async function audioAction(button, action) {
+  button.disabled = true; message('audioMessage', '正在处理，请等待…')
+  try { await action() } catch (e) { message('audioMessage', e.message, true) } finally { button.disabled = false }
+}
+$('voicesButton').onclick = () => audioAction($('voicesButton'), async () => { const r = await api('voices', { tts: tts() }); setVoices(r.voices); message('audioMessage', r.source) })
+for (const role of ['A', 'B']) $('test' + role).onclick = () => audioAction($('test' + role), async () => { const r = await api('preview', { tts: tts($('voice' + role).value) }); playAudio(r.audio); message('audioMessage', '试听成功，请检查音色效果。') })
+$('audioMode').onchange = () => { $('multiEditor').hidden = $('audioMode').value !== 'multi' }
+function loadAudioJob() {
+  const a = jobs.find(j => j.id === $('audioJob').value)?.audio
+  $('audioScript').value = a?.script || ''; $('audioMode').value = a?.mode || 'single'; $('audioMode').onchange()
+  if (a?.config && ttsProviders[a.config.provider]) {
+    if ($('ttsProvider').value !== a.config.provider) { $('ttsProvider').value = a.config.provider; $('ttsProvider').onchange() }
+    $('ttsRegion').value = a.config.region; $('ttsModel').value = a.config.model; $('ttsStyle').value = a.config.style; $('voiceA').value = a.config.voice; $('voiceB').value = a.voiceB || a.config.voice
+  }
+}
+$('audioJob').onchange = () => { loadAudioJob(); refreshAudio() }
+$('rolesButton').onclick = () => audioAction($('rolesButton'), async () => {
+  const id = $('audioJob').value, before = $('audioScript').value
+  const r = await api('roles', { id, config: config() })
+  if (id !== $('audioJob').value || before !== $('audioScript').value) throw Error('台词或视频已变更，请重新整理。')
+  $('audioScript').value = r.script; message('audioMessage', '草稿已生成，所有角色归属均需核对。修改后先试听。')
+})
+$('previewButton').onclick = () => audioAction($('previewButton'), async () => {
+  const j = jobs.find(j => j.id === $('audioJob').value)
+  if (!j) throw Error('请选择已翻译的视频。')
+  const multi = $('audioMode').value === 'multi'
+  const lines = multi ? $('audioScript').value.split('\n').filter(s => s.trim()).slice(0, 2) : [j.translation]
+  if (!lines.length) throw Error('请先填写角色台词。')
+  for (const line of lines) {
+    const m = line.match(/^\s*([AB])[:：]\s*(.+)$/)
+    if (multi && !m) throw Error('请使用 A: 台词 或 B: 台词。')
+    const r = await api('preview', { tts: tts(m?.[1] === 'B' ? $('voiceB').value : $('voiceA').value), text: m ? m[2] : line })
+    playAudio(r.audio)
+    if (lines.length > 1) await new Promise(resolve => { const timer = setTimeout(resolve, 90000); const done = () => { clearTimeout(timer); resolve() }; $('audioPlayer').onended = done; $('audioPlayer').onerror = done; $('audioPlayer').onpause = done })
+  }
+  message('audioMessage', '片段试听已生成。')
+})
+$('audioStart').onclick = () => audioAction($('audioStart'), async () => { await api('audio-start', { id: $('audioJob').value, mode: $('audioMode').value, script: $('audioScript').value, voiceB: $('voiceB').value, tts: tts() }); message('audioMessage', '后台合成已启动。可关闭网页，请保留启动终端。'); await refresh() })
+$('audioStop').onclick = () => audioAction($('audioStop'), async () => { await api('audio-stop', { id: $('audioJob').value }); message('audioMessage', '已请求停止。') })
+$('audioDownload').onclick = () => audioAction($('audioDownload'), async () => {
+  const r = await fetch('/api/audio?id=' + encodeURIComponent($('audioJob').value), { headers: { 'X-Lingo-Token': token } })
+  if (!r.ok) throw Error('音频不可用，请刷新任务状态。')
+  const url = URL.createObjectURL(await r.blob()); playAudio(url)
+  const a = document.createElement('a'); a.href = url; a.download = '译伴-' + $('audioJob').value + '.mp3'; a.click(); message('audioMessage', '完整 MP3 已准备好。')
+})
+function refreshAudio() {
+  const completed = jobs.filter(j => j.status === 'complete'), ids = completed.map(j => j.id).join(',')
+  if (ids !== audioJobView) { const selected = $('audioJob').value; $('audioJob').replaceChildren(...completed.map(j => new Option(j.title, j.id))); if (completed.some(j => j.id === selected)) $('audioJob').value = selected; audioJobView = ids; if ($('audioJob').value !== selected) loadAudioJob() }
+  const a = jobs.find(j => j.id === $('audioJob').value)?.audio
+  $('audioProgress').textContent = a ? `${({ running: '合成中', failed: '合成未完成', complete: 'MP3 已完成' })[a.status]} · ${a.done || 0} / ${a.total || 0} 段。${a.error || ''}` : '请选择视频并配置语音，先试听再生成全文。'
+  $('audioDownload').hidden = a?.status !== 'complete'
+  $('audioStop').disabled = a?.status !== 'running'
+}

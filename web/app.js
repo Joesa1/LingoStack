@@ -15,7 +15,7 @@ $('provider').onchange = () => {
 }
 $('models').onchange = () => { if ($('models').value) { $('model').value = $('models').value; edited() } }
 async function testOrModels(kind, button) {
-  const expected = revision; button.disabled = true; message('configStatus', kind === 'test' ? '正在测试连接…' : '正在获取模型列表…')
+  const expected = revision; button.disabled = true; message('configStatus', kind === 'test' ? '正在测试连接，最多等待 3 分钟…' : '正在获取模型列表…')
   try {
     const data = await api(kind, { config: config() }); if (expected !== revision) return
     if (kind === 'models') {
@@ -46,6 +46,7 @@ function render() {
     const a = element('a', '打开原视频 ↗', article); a.href = job.url; a.target = '_blank'; a.rel = 'noopener noreferrer'
     const labels = { fetching: '获取字幕中', translating: '分段翻译中', complete: '已完成', failed: '处理失败' }
     element('p', `${labels[job.status]} · 已翻译 ${job.translations.length} / ${job.parts.length} 段`, article)
+    if (job.status === 'translating') element('p', `正在等待第 ${job.translations.length + 1} 段译文，每段最多等待 3 分钟。已完成内容会自动保存。`, article)
     if (job.error) element('p', job.error, article).className = 'error'
     if (job.status === 'failed') {
       const button = element('button', '重试（使用当前模型配置）', article); button.disabled = busy
@@ -62,7 +63,12 @@ function render() {
 async function refresh() {
   jobs = await api('jobs'); busy = jobs.some(j => ['fetching', 'translating'].includes(j.status)); $('start').disabled = busy
   if (jobs[0]?.status === 'complete' && !busy) message('status', '处理完成，可查看全文或下载中文 TXT。')
-  const snapshot = JSON.stringify(jobs); if (snapshot !== view) { view = snapshot; render() }
+  const snapshot = JSON.stringify(jobs); if (snapshot !== view) {
+    const active = jobs.find(j => ['fetching', 'translating'].includes(j.status))
+    if (active) message('status', active.status === 'fetching' ? '正在自动获取字幕。' : `字幕已获取，正在翻译第 ${active.translations.length + 1} / ${active.parts.length} 段。`)
+    else if (jobs[0]?.status === 'failed') message('status', '处理失败，原因见下方任务。已完成分段已保留。', true)
+    view = snapshot; render()
+  }
 }
 async function poll() { try { await refresh() } catch (e) { message('status', '无法连接本地服务，请重新双击启动程序并刷新页面。', true) } finally { setTimeout(poll, 2000) } }
 async function init() {

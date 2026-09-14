@@ -7,7 +7,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { PROVIDERS, validateProvider } from '../src/shared/provider-config'
-import { complete, listModels } from '../src/background/provider'
+import { complete, listModels, ProviderError } from '../src/background/provider'
 
 const root = path.dirname(fileURLToPath(import.meta.url))
 const directory = process.env.LINGO_DATA_DIR || path.join(os.homedir(), 'Library/Application Support/LingoPreprocess')
@@ -72,11 +72,11 @@ async function processJob(job: any, config: any) {
     }
     job.status = 'translating'; job.error = ''; await save(job)
     for (let i = job.translations.length; i < job.parts.length; i++) {
-      const translated = await complete(config, 'Translate the supplied video transcript into natural Simplified Chinese. Reconstruct complete sentences across subtitle fragments. Preserve all substantive information, names, numbers and speaker distinctions; do not summarize or invent information. Output only the translation.', job.parts[i])
+      const translated = await complete(config, 'Translate the supplied video transcript into natural Simplified Chinese. Reconstruct complete sentences across subtitle fragments. Preserve all substantive information, names, numbers and speaker distinctions; do not summarize or invent information. Output only the translation.', job.parts[i], fetch, 180_000)
       job.translations.push(translated); job.translation = job.translations.join('\n\n'); await save(job)
     }
     job.status = 'complete'; await save(job)
-  } catch (e) { job.status = 'failed'; job.error = e instanceof Error ? e.message : '处理失败。'; await save(job) }
+  } catch (e) { job.status = 'failed'; job.error = e instanceof ProviderError && e.code === 'timeout' ? `第 ${job.translations.length + 1} 段翻译等待超过 3 分钟，未收到完整译文。已保留完成的分段；请检查服务商状态与网络后重试。` : e instanceof Error ? e.message : '处理失败。'; await save(job) }
   finally { running = undefined }
 }
 const server = http.createServer(async (req, res) => {
@@ -94,7 +94,7 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(200, { 'Content-Type': name.endsWith('.html') ? 'text/html; charset=utf-8' : name.endsWith('.js') ? 'text/javascript; charset=utf-8' : 'text/css', 'Cache-Control': 'no-store' }); res.end(body); return
     }
     if (req.headers['x-lingo-token'] !== token) return json({ error: '页面已失效，请刷新。' }, 403)
-    if (req.method === 'GET' && route === '/api/config') return json({ version: '0.2.0', providers: PROVIDERS })
+    if (req.method === 'GET' && route === '/api/config') return json({ version: '0.2.1', providers: PROVIDERS })
     if (req.method === 'GET' && route === '/api/jobs') return json([...jobs.values()].sort((a, b) => b.createdAt - a.createdAt))
     if (req.method !== 'POST') return json({ error: '接口不存在。' }, 404)
     if (!req.headers['content-type']?.startsWith('application/json')) return json({ error: '请求格式错误。' }, 400)
@@ -102,7 +102,7 @@ const server = http.createServer(async (req, res) => {
     const input = JSON.parse(body)
     if (route === '/api/test' || route === '/api/models') {
       const config = validateProvider(input.config, route === '/api/test')
-      return json(route === '/api/test' ? { text: await complete(config, 'Translate into Simplified Chinese.', 'Hello, this connection works.') } : { models: await listModels(config) })
+      return json(route === '/api/test' ? { text: await complete(config, 'Translate into Simplified Chinese.', 'Hello, this connection works.', fetch, 180_000) } : { models: await listModels(config) })
     }
     if (route === '/api/jobs' || route === '/api/retry') {
       if (running) return json({ error: '已有任务处理中，请等待完成。' }, 409)
@@ -122,7 +122,7 @@ const server = http.createServer(async (req, res) => {
 })
 server.listen(Number(process.env.LINGO_PORT || 18743), '127.0.0.1', () => {
   const url = `http://127.0.0.1:${(server.address() as any).port}`
-  console.log(`译伴视频预处理 0.2.0\n${url}\n关闭终端会停止服务；已完成内容保存在本机。`)
+  console.log(`译伴视频预处理 0.2.1\n${url}\n关闭终端会停止服务；已完成内容保存在本机。`)
   if (process.env.LINGO_OPEN !== '0') execFile('open', [url], () => {})
 })
 server.on('error', () => { console.error('启动失败：端口可能已被占用。请关闭旧的译伴预处理窗口后重试。'); process.exitCode = 1 })

@@ -1,7 +1,7 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>译伴</title><link rel="stylesheet" href="../ui.css"></head>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>译栈</title><link rel="stylesheet" href="../ui.css"></head>
 <body class="popup"><main>
-<header><div class="brand-mark" aria-hidden="true">译</div><div><h1>译伴</h1><p class="subtitle">读懂网页，听懂视频</p></div><button id="settings" class="quiet" aria-label="打开设置">设置 ↗</button></header>
+<header><img class="brand-mark" src="/icon/128.png" width="44" height="44" alt=""><div><h1>译栈</h1><p class="subtitle">读懂网页，听懂视频</p></div><button id="settings" class="quiet" aria-label="打开设置">设置 ↗</button></header>
 <section class="page-section"><div class="section-label">当前网页</div><button id="translate" class="primary wide">翻译当前网页</button><div class="two"><button id="restore">恢复原文</button><button id="retry">重新翻译</button></div>
 <label class="row">目标语言<select id="targetLang"></select></label><label class="row">显示方式<select id="mode"><option value="bilingual">双语对照</option><option value="only">仅译文</option></select></label><label class="row">划词翻译<input id="selection" type="checkbox" role="switch"></label></section>
 <section><div class="section-label">当前 YouTube 视频</div><label class="row">双语字幕<input id="subtitles" type="checkbox" role="switch"></label><label class="row">译文朗读<input id="speech" type="checkbox" role="switch"></label><label class="row">朗读时静音原声<input id="mute" type="checkbox" role="switch"></label><p class="hint">支持视频自带字幕和 YouTube 自动字幕。</p></section>

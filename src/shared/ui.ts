@@ -2,7 +2,7 @@ import { LANGUAGES } from "./settings-store"
 export const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T
 export async function rpc<T = any>(type: string, data: Record<string, unknown> = {}): Promise<T> {
   const reply = await chrome.runtime.sendMessage({ type, ...data })
-  if (reply === undefined || reply === null) throw new Error("扩展未返回结果，请在扩展管理页重新加载译伴后重试。")
+  if (reply === undefined || reply === null) throw new Error("扩展未返回结果，请在扩展管理页重新加载译栈后重试。")
   if (reply?.error) throw new Error(reply.error)
   return reply
 }

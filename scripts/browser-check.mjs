@@ -128,7 +128,7 @@ try {
     await page.locator('#source').click({ clickCount: 3, position: { x: 50, y: 8 } })
     const trigger = page.locator('html > div[style*="2147483647"]')
     await trigger.waitFor({ state: 'visible' })
-    assert.match(await shadowText(), /译伴翻译/)
+    assert.match(await shadowText(), /译栈翻译/)
     await trigger.click()
     const deadline = Date.now() + 5000
     while (Date.now() < deadline) {

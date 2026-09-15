@@ -1,3 +1,15 @@
+# 1.3.0 UI release validation
+
+Date: 2026-09-15.
+
+- Production build: Chrome MV3, version 1.3.0, name 译栈 · 网页与字幕翻译. Supplied SVG rendered at 16/32/48/128 px. No additional runtime dependencies.
+- Real Chromium extension checks passed: translation configuration, model lists, test feedback, webpage translation, dynamic content, restore, selection action, cloud TTS settings for three providers, voices, persistence, preview playback, cancellation and responsive layout. Cloud calls use test audio at the HTTP boundary, not a paid live account.
+- Popup verified at 390 × 600 px with the new icon loaded and no overflow. Original options form IDs are preserved; panel navigation only changes visibility. Full npm run typecheck and targeted strict TypeScript checks passed. Nineteen provider and TTS unit tests passed.
+- The full test suite did not complete in this environment: jsdom worker initialization timed out, and an unrelated preprocessing test initially lacked its Python runtime. The successful extension browser checks and targeted checks above are not a claim that the full suite passed.
+- Main branch unchanged. No changes to translation/voice algorithms, provider configuration, storage keys, extension permissions, or the preprocessing app. Runtime string changes are branding only.
+
+---
+
 # 验证记录
 
 验证日期：2026-09-11。以下按真实执行结果记录，不把测试数据当作真实模型输出。

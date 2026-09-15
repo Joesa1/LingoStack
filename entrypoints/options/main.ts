@@ -102,3 +102,15 @@ void (async () => {
   $<HTMLSelectElement>("speechMode").value = s.speechMode
   status(s.providerReady ? "配置已就绪，可返回网页开始翻译。" : "填写 API key 和模型名称，然后保存配置。")
 })().catch(e => status(e.message, true))
+
+// Switch presentation panels without changing configuration or provider state.
+for (const [index, id] of ["translationTab", "speechTab"].entries()) {
+  $(id).onclick = () => {
+    for (const [i, tab] of ["translationTab", "speechTab"].entries()) {
+      $(tab).classList.toggle("active", i === index)
+      $(tab).setAttribute("aria-pressed", String(i === index))
+    }
+    $("translationPanel").hidden = index !== 0
+    $("speechPanel").hidden = index !== 1
+  }
+}

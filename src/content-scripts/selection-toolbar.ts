@@ -74,7 +74,7 @@ function errorMessageFor(reply: TrSelectionTranslateReply): string {
     case "connection_lost":
       return "翻译连接中断，请点击重试。"
     case "provider_not_ready":
-      return "请在译伴设置中填写 API key 和模型。"
+      return "请在译栈设置中填写 API key 和模型。"
     case "provider_error":
       return "模型服务不可用，请检查设置。"
     case "parse_error":

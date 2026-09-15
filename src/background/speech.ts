@@ -98,7 +98,7 @@ function begin(text: string, resolveConfig: () => Promise<{ config: TtsConfig; v
 }
 export async function previewSpeech(name: string, lang: string, rate: number, raw?: unknown) {
   const config = raw === undefined ? await savedTts() : validateTts(raw)
-  const samples: Record<string, string> = { zh: "你好，我是译伴。现在可以一边看视频，一边听中文翻译。", en: "Hello. Listen to translated subtitles while watching your video.", ja: "こんにちは。翻訳した字幕を読み上げます。", ko: "안녕하세요. 번역된 자막을 읽어 드립니다.", fr: "Bonjour. Écoutez la traduction des sous-titres.", de: "Hallo. Hören Sie die übersetzten Untertitel.", es: "Hola. Escucha los subtítulos traducidos.", ru: "Здравствуйте. Слушайте перевод субтитров.", ar: "مرحباً. استمع إلى ترجمة النص.", pt: "Olá. Ouça as legendas traduzidas.", it: "Ciao. Ascolta i sottotitoli tradotti." }
+  const samples: Record<string, string> = { zh: "你好，我是译栈。现在可以一边看视频，一边听中文翻译。", en: "Hello. Listen to translated subtitles while watching your video.", ja: "こんにちは。翻訳した字幕を読み上げます。", ko: "안녕하세요. 번역된 자막을 읽어 드립니다.", fr: "Bonjour. Écoutez la traduction des sous-titres.", de: "Hallo. Hören Sie die übersetzten Untertitel.", es: "Hola. Escucha los subtítulos traducidos.", ru: "Здравствуйте. Слушайте перевод субтитров.", ar: "مرحباً. استمع إلى ترجمة النص.", pt: "Olá. Ouça as legendas traduzidas.", it: "Ciao. Ascolta i sottotitoli tradotti." }
   return begin(samples[lang.split("-")[0]!] ?? samples.en!, async () => ({ config, voiceName: name, lang, rate: Math.min(2, Math.max(0.5, Number(rate) || 1)) }), () => {})
 }
 export function registerSpeech(isEnabled: (tabId: number) => Promise<boolean>) {

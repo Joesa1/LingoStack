@@ -154,7 +154,7 @@ export default defineBackground(() => {
   }
   chrome.commands.onCommand.addListener(command => { if (command === "toggle-translate") void toggle() })
   chrome.runtime.onInstalled.addListener(() => {
-    chrome.contextMenus.removeAll(() => chrome.contextMenus.create({ id: "translate-page", title: "译伴：翻译网页 / 恢复原文", contexts: ["page", "selection"] }))
+    chrome.contextMenus.removeAll(() => chrome.contextMenus.create({ id: "translate-page", title: "译栈：翻译网页 / 恢复原文", contexts: ["page", "selection"] }))
   })
   chrome.contextMenus.onClicked.addListener((info, tab) => { if (info.menuItemId === "translate-page") void toggle(tab?.id) })
 })

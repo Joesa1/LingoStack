@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">Yizhan Apple-style icon</title>
+  <desc id="desc">A neutral source layer transforms into a blue translated layer.</desc>
+
+  <defs>
+    <linearGradient id="background" x1="45" y1="26" x2="210" y2="233" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#34363A"/>
+      <stop offset="0.52" stop-color="#202124"/>
+      <stop offset="1" stop-color="#141416"/>
+    </linearGradient>
+    <radialGradient id="blueGlow" cx="0" cy="0" r="1" gradientTransform="translate(179 195) rotate(-122) scale(105 125)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A84FF" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#0A84FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="source" x1="70" y1="48" x2="164" y2="125" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#E5E5EA"/>
+    </linearGradient>
+    <linearGradient id="translation" x1="68" y1="138" x2="177" y2="216" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#48A8FF"/>
+      <stop offset="0.48" stop-color="#168BFF"/>
+      <stop offset="1" stop-color="#006FE8"/>
+    </linearGradient>
+    <filter id="shadow" x="25" y="31" width="216" height="207" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#000000" flood-opacity="0.34"/>
+    </filter>
+  </defs>
+
+  <rect x="12" y="12" width="232" height="232" rx="52" fill="url(#background)"/>
+  <rect x="12" y="12" width="232" height="232" rx="52" fill="url(#blueGlow)"/>
+  <rect x="13.5" y="13.5" width="229" height="229" rx="50.5" fill="none" stroke="#FFFFFF" stroke-opacity="0.15" stroke-width="3"/>
+
+  <g filter="url(#shadow)">
+    <rect x="50" y="47" width="156" height="76" rx="20" fill="url(#source)"/>
+    <path d="M68 55h120" fill="none" stroke="#FFFFFF" stroke-opacity="0.9" stroke-width="3" stroke-linecap="round"/>
+    <rect x="78" y="72" width="100" height="12" rx="6" fill="#3A3A3C"/>
+    <rect x="78" y="95" width="66" height="12" rx="6" fill="#636366"/>
+
+    <rect x="42" y="139" width="172" height="76" rx="20" fill="url(#translation)"/>
+    <path d="M60 147h136" fill="none" stroke="#FFFFFF" stroke-opacity="0.38" stroke-width="3" stroke-linecap="round"/>
+
+    <path d="M128 112v28" fill="none" stroke="#64D2FF" stroke-width="12" stroke-linecap="round"/>
+    <path d="m114 133 14 14 14-14" fill="none" stroke="#64D2FF" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <rect x="78" y="164" width="100" height="12" rx="6" fill="#FFFFFF"/>
+    <rect x="78" y="187" width="66" height="12" rx="6" fill="#FFFFFF" fill-opacity="0.72"/>
+  </g>
+</svg>

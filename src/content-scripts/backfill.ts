@@ -28,11 +28,8 @@
  *   same-line; lyric lines and prose sit in a non-flex container (e.g. plain
  *   `<div>`), so each line's translation gets its own line by default —
  *   segments are NOT unconditionally same-line.
- * - The translated text (never the original) is tinted green, so which line
- *   is the translation is obvious
- *   at a glance without any heavier decoration. `only` mode replaces the
- *   text in place and stays undecorated (recoloring the whole page would be
- *   the opposite of calm).
+ * - Translation follows source color by default. A validated user color
+ *   overrides only translated text, in both bilingual and replacement modes.
  *
  * Every unit's wrapper is APPENDED as the unit element's last child, never
  * inserted as a sibling.
@@ -260,9 +257,7 @@ const STYLE_MARKER_ATTR = "data-lingo-tr-style"
  * D10 (bilingual pages must stay calm):
  * - block translation: inline-block + `margin: 8px 0` on its own line.
  * - inline translation: flows in place, no layout impact beyond the text.
- * - translated text tinted green
- *   (`oklch(0.693 0.17 162.48)`, hex fallback) — the one visual cue that
- *   separates translation from original.
+ * - translated text inherits source color or the user-selected CSS variable.
  * - spinner: 6px thin muted arc (a page of pending units must not become a
  *   field of high-contrast rings).
  * - `overflow-wrap: anywhere` keeps long translated words from blowing out
@@ -270,8 +265,9 @@ const STYLE_MARKER_ATTR = "data-lingo-tr-style"
  */
 const INJECTED_CSS = `
 [data-lingo-tr-wrapper], [data-lingo-tr-wrapper] * { overflow-wrap: anywhere; word-break: normal; }
+[data-lingo-tr-wrapper="only"] { color: var(--lingo-translation-color, inherit); }
 [data-lingo-tr-wrapper] .lingo-tr__text {
-  color: #10b981; color: oklch(0.693 0.17 162.48);
+  color: var(--lingo-translation-color, inherit);
   font-family: inherit; font-style: inherit;
 }
 [data-lingo-tr-wrapper] .lingo-tr__text--block { display: inline-block; margin: 8px 0 !important; }

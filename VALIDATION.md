@@ -1,3 +1,7 @@
+# 1.3.1 translation color validation
+
+Real Chromium extension checks passed: adaptive source color on dark and light backgrounds, custom color applied to existing translation, settings persisted after options reload, and no additional translation request on color change. Existing model list, translation feedback, page translation, dynamic content, selection and restore checks also passed. Targeted strict TypeScript check passed.
+
 # 1.3.0 UI release validation
 
 Date: 2026-09-15.

@@ -96,6 +96,9 @@ $("rate").oninput = () => { $("rateValue").textContent = `${Number($<HTMLInputEl
 void (async () => {
   await initTtsSettings()
   const [c, s, v] = await Promise.all([rpc("GET_CONFIG"), rpc("TR_GET_SETTINGS"), rpc("GET_VOICES")])
+  $<HTMLSelectElement>("translationColorMode").value = s.translationColorMode ?? "auto"
+  $<HTMLInputElement>("translationColor").value = s.translationColor ?? "#007aff"
+  $("translationColorLabel").hidden = s.translationColorMode !== "custom"
   showConfig(c); language.value = s.targetLang; voices = v.voices; renderVoices(s.voiceName)
   $<HTMLInputElement>("rate").value = String(s.speechRate); $("rateValue").textContent = `${s.speechRate.toFixed(1)}×`
   $<HTMLInputElement>("mute").checked = s.muteOriginal
@@ -112,5 +115,16 @@ for (const [index, id] of ["translationTab", "speechTab"].entries()) {
     }
     $("translationPanel").hidden = index !== 0
     $("speechPanel").hidden = index !== 1
+  }
+}
+
+for (const id of ["translationColorMode", "translationColor"]) {
+  $(id).onchange = async () => {
+    const mode = $<HTMLSelectElement>("translationColorMode").value
+    $("translationColorLabel").hidden = mode !== "custom"
+    try {
+      await rpc("TR_UPDATE_SETTINGS", { patch: { translationColorMode: mode, translationColor: $<HTMLInputElement>("translationColor").value } })
+      $("colorStatus").textContent = "译文颜色已保存。"
+    } catch (e) { $("colorStatus").textContent = e instanceof Error ? e.message : "保存失败，请重试。" }
   }
 }

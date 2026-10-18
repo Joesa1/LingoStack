@@ -8,7 +8,8 @@
     "build": "wxt build",
     "typecheck": "wxt prepare && tsc --noEmit",
     "test": "vitest run",
-    "package": "npm run typecheck && npm test && npm run build && node scripts/package.mjs"
+    "release:check": "node scripts/release-check.mjs",
+    "package": "npm run typecheck && npm run build && node scripts/package.mjs"
   },
   "devDependencies": {
     "@types/chrome": "^0.0.287",

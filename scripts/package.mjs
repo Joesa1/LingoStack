@@ -1,6 +1,7 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
+execFileSync('node', ['scripts/release-check.mjs'], { stdio: 'inherit' })
 const root = path.resolve('release/译栈')
 await fs.mkdir(root, { recursive: true })
 await fs.rm(path.join(root,'chrome'), { recursive:true,force:true })
@@ -37,6 +38,10 @@ await fs.writeFile('release/译栈-安装说明.txt', instructions)
 const shareZip = path.resolve(`release/译栈-${manifest.version}-朋友分享包.zip`)
 await fs.rm(shareZip, { force: true })
 execFileSync('zip', ['-qr', shareZip, 'chrome', 'INSTALL.txt'], { cwd: root })
+const shareContents = execFileSync('unzip', ['-Z1', shareZip], { encoding: 'utf8' }).trim().split('\n').filter(Boolean)
+if (!shareContents.includes('INSTALL.txt') || !shareContents.includes('chrome/manifest.json') || shareContents.some(item => item !== 'INSTALL.txt' && !item.startsWith('chrome/'))) {
+  throw new Error('Share archive must contain only chrome/ and INSTALL.txt')
+}
 console.log(`Share archive: ${shareZip}`)
 const zip=path.resolve(`release/译栈-${manifest.version}.zip`)
 await fs.rm(zip,{force:true})

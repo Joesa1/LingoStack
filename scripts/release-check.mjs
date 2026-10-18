@@ -10,7 +10,7 @@ const rules = [
   ["generic API-key assignment", /\b(?:api[_-]?(?:key|token)|client[_-]?secret|secret[_-]?key)\b\s*[:=]\s*["'`]([^"'`\s]{16,})["'`]/gi],
 ]
 
-const placeholder = /^(?:fixture|test|example|sample|dummy|your|replace|changeme)[-_a-z0-9]*$/i
+const placeholder = /^(?:fixture|test|example|sample|dummy|your|replace|changeme)[-_a-z0-9]*$|^private-(?:fixture|test)-key[-_a-z0-9]*$/i
 const text = file => {
   const data = readFileSync(file)
   return data.includes(0) ? null : data.toString("utf8")

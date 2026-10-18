@@ -2,6 +2,7 @@
 
 - `node scripts/release-check.mjs` scans tracked text files for common credential patterns. It reports only paths and rule categories; it does not print matching values.
 - `scripts/package.mjs` runs that scan before packaging and verifies that the share archive contains only `chrome/` and `INSTALL.txt`.
+- `pnpm run package` runs type checking, production build, and archive validation. The full test suite remains available through `pnpm test` and is not a packaging prerequisite.
 - This check does not establish that all reachable Git history is credential-free. Review history and GitHub secret scanning before changing repository visibility.
 
 # 1.3.1 translation color validation

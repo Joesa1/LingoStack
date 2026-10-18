@@ -4,3 +4,6 @@ dist/
 release/
 test-results/
 .DS_Store
+
+web/__pycache__/
+web/.venv/

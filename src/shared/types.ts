@@ -123,6 +123,8 @@ export type TrGetSettingsMessage = {
  * content script (queried via TR_GET_PAGE_STATE), not a global setting.
  */
 export type TrSettingsReply = {
+  translationColorMode?: "auto" | "custom"
+  translationColor?: string
   mode: TranslateMode
   targetLang: string
   /** Whether the selection-translate toolbar is enabled (extension-local preference). */

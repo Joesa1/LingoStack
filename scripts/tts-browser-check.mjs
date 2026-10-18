@@ -38,6 +38,7 @@ try {
   }, { base64: wav.toString('base64') })
   const page = await context.newPage(); await page.goto(`chrome-extension://${id}/options.html`)
   await page.locator('#status').filter({ hasText: '填写' }).waitFor()
+  await page.click('#speechTab')
   assert.equal(await page.locator('#ttsProvider option').count(), 4)
   for (const provider of ['dashscope', 'azure', 'minimax']) {
     await page.locator('#ttsProvider').selectOption(provider)
@@ -70,7 +71,7 @@ try {
   assert.equal(await page.locator('#ttsKey').inputValue(), 'private-test-key-azure')
   await worker.evaluate(() => { globalThis.ttsDelay = 0 })
   await page.locator('#ttsSave').click(); await page.locator('#ttsSaveStatus[data-state=success]').waitFor()
-  await page.reload(); await page.locator('#status').filter({ hasText: '填写' }).waitFor()
+  await page.reload(); await page.locator('#status').filter({ hasText: '填写' }).waitFor(); await page.click('#speechTab')
   assert.equal(await page.locator('#ttsProvider').inputValue(), 'azure')
   assert.equal(await page.locator('#ttsKey').inputValue(), 'private-test-key-azure')
   // Let the real offscreen Audio element complete and verify actual playing/end events.
@@ -85,7 +86,7 @@ try {
   await page.setViewportSize({ width: 390, height: 844 }); await page.screenshot({ path: 'test-results/cloud-tts-mobile.png', fullPage: true })
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
   await page.locator('#ttsDelete').click(); await page.locator('#ttsSaveStatus[data-state=success]').waitFor()
-  await page.reload(); await page.locator('#status').filter({ hasText: '填写' }).waitFor()
+  await page.reload(); await page.locator('#status').filter({ hasText: '填写' }).waitFor(); await page.click('#speechTab')
   assert.equal(await page.locator('#ttsProvider').inputValue(), 'system')
   // Exercise the real content-script port during synthesis and playback.
   await page.evaluate(() => chrome.runtime.sendMessage({ type: 'SAVE_TTS_CONFIG', config: { provider: 'minimax', apiKey: 'private-test-key-minimax', region: 'cn', model: 'speech-2.8-turbo', voice: 'Chinese (Mandarin)_Reliable_Executive', style: '' } }))

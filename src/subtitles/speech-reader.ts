@@ -13,6 +13,7 @@ export function createSpeechReader(video: HTMLVideoElement, settings: WebTransla
   let disposed = false
   let watchdog: ReturnType<typeof setTimeout> | undefined
   let mutedByUs = false
+  const queue: SubtitleCue[] = []
   function mute() { if (settings.muteOriginal) { video.muted = true; mutedByUs = true } }
   function restoreMute() { if (mutedByUs) { video.muted = originalMuted; mutedByUs = false } }
   function send(message: unknown) { if (!disposed) { try { port.postMessage(message) } catch { fail("朗读连接已断开，请重新开启译文朗读。") } } }
@@ -22,7 +23,18 @@ export function createSpeechReader(video: HTMLVideoElement, settings: WebTransla
     if (!video.ended && !disposed) void video.play().catch(() => onError("请点击视频继续播放。"))
   }
   function fail(message: string) { speakingId = undefined; clearTimeout(watchdog); restoreMute(); resumeVideo(); onError(message) }
-  function stop() { send({ type: "stop" }); speakingId = undefined; clearTimeout(watchdog); restoreMute() }
+  function stop(clearQueue = true) { send({ type: "stop" }); speakingId = undefined; clearTimeout(watchdog); restoreMute(); if (clearQueue) queue.length = 0 }
+  function speak(cue: SubtitleCue) {
+    spokenCue = cue
+    speakingId = `${cue.start}:${Date.now()}`
+    const windowSeconds = Math.max(0.8, (cue.end - cue.start) / 1000)
+    const words = cue.translation!.trim().split(/\s+/).filter(Boolean).length
+    const chars = cue.translation!.replace(/\s/g, "").length
+    const estimatedSeconds = words > 1 ? words * 0.34 : chars * 0.22
+    const adaptive = settings.speechMode === "natural" ? Math.min(1.35, Math.max(0.75, estimatedSeconds / windowSeconds)) : 1
+    send({ type: "speak", id: speakingId, text: cue.translation, playbackRate: video.playbackRate * adaptive })
+    watchdog = setTimeout(() => { stop(); fail("朗读等待超时，请重新播放或更换声音。") }, 90_000)
+  }
   function update(cue: SubtitleCue | undefined) {
     active = cue
     if (disposed || video.paused || video.seeking || !cue?.translation || spokenCue?.start === cue.start) return
@@ -30,12 +42,12 @@ export function createSpeechReader(video: HTMLVideoElement, settings: WebTransla
     // occurrence or an explicit seek remains eligible to be read again.
     if (spokenCue && cue.start < spokenCue.end && normalizeText(cue.text) === normalizeText(spokenCue.text)
       && normalizeText(cue.translation) === normalizeText(spokenCue.translation ?? "")) return
-    // One utterance at a time. With continuous playback, replace overdue speech rather than accumulate a queue.
+    if (settings.speechMode === "natural" && speakingId) {
+      if (!queue.some(item => item.start === cue.start)) queue.push(cue)
+      return
+    }
     stop()
-    spokenCue = cue
-    speakingId = `${cue.start}:${Date.now()}`
-    send({ type: "speak", id: speakingId, text: cue.translation, playbackRate: video.playbackRate })
-    watchdog = setTimeout(() => { stop(); fail("朗读等待超时，请重新播放或更换声音。") }, 90_000)
+    speak(cue)
   }
   function tick() {
     if (speakingId && settings.waitForSpeech && active && video.currentTime * 1000 >= active.end - 120 && !video.paused && !video.seeking) {
@@ -55,6 +67,7 @@ export function createSpeechReader(video: HTMLVideoElement, settings: WebTransla
     if (["end", "error", "interrupted", "cancelled"].includes(m.type)) {
       speakingId = undefined; clearTimeout(watchdog)
       if (m.type === "error") fail(m.error || "译文朗读失败。")
+      else if (settings.speechMode === "natural" && queue.length > 0) speak(queue.shift()!)
       else { restoreMute(); resumeVideo() }
     }
   })

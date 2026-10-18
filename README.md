@@ -1,136 +1,91 @@
-# 译伴 · 网页与字幕翻译
+# LingoStack · 译栈
 
-独立的 Chrome 扩展。安装和运行不需要桌面应用、本机后台服务或此项目以外的源代码。
+[English](#english) | [中文](#中文)
 
-## 安装
+## English
 
-1. 打开 Chrome，在地址栏输入 `chrome://extensions`。
-2. 打开右上角「开发者模式」。
-3. 点击「加载已解压的扩展程序」，选择 `release/译伴/chrome` 文件夹。直接从源码构建时选择 `dist/chrome`。
-4. 在 Chrome 工具栏的拼图菜单中固定「译伴」。
-5. 打开译伴 →「设置」，选择服务商，填写 API key 和模型名称，保存配置。可以先点击「测试翻译」。
-6. 刷新安装前已经打开的网页，然后开始使用。
+LingoStack is an independent Chrome extension for translating webpages and YouTube captions with an AI provider you configure yourself. It does not require a desktop app, a local server, or the original Dim Agent project.
 
-不要把 ZIP 文件直接拖进 Chrome。请先解压，再选择包含 `manifest.json` 的 `chrome` 文件夹。加载后保留该文件夹，移动或删除会影响扩展运行。
+### What it does
 
-## 更新到 1.1.0
+- Translates the current webpage on demand, with bilingual view, translation-only view, restore, and selected-text translation.
+- Translates captions on regular YouTube watch pages and can read translated captions with Chrome system voices or supported cloud TTS providers.
+- Supports OpenAI-compatible Chat Completions, OpenAI Responses, Anthropic Messages, and Gemini Generate Content translation APIs.
+- Keeps translation and cloud-voice configuration separate. Translation color can follow the source page or use a custom color.
 
-如果之前加载的就是本项目 `release/译伴/chrome`，该文件夹已更新。在 `chrome://extensions` 中找到「译伴」，点击重新加载，然后关闭旧设置页并重新打开。无需卸载，保存的 API 配置会保留。
+### Install locally in Chrome
 
-如果扩展安装在其他文件夹，先解压新版 ZIP，用新版 `chrome` 文件夹的内容覆盖原来加载的文件夹，再重新加载，并刷新安装前已打开的网页和视频。不要另选一个安装目录或先卸载，以免丢失原扩展的配置。
+1. Download a release archive and unzip it into a folder you will keep.
+2. Open `chrome://extensions`, enable **Developer mode**, then choose **Load unpacked**.
+3. Select the unzipped `chrome` folder, which contains `manifest.json`.
+4. Pin LingoStack, open **Settings**, choose a provider, enter your own API key and model, test the connection, then save.
+5. Refresh pages that were already open before installation.
 
-1.1.0 新增阿里百炼、Azure、MiniMax 云端朗读，可以分别保存凭证、选择音色、试听和切换服务。系统朗读仍可直接使用。
+Do not drag a ZIP into Chrome. Do not move or delete the loaded folder after installation. To update, replace the contents of the existing `chrome` folder and click **Reload** in `chrome://extensions`; keeping the same folder preserves local settings.
 
-保留 1.0.2 的修复：滚动字幕把旧句子重新送去翻译和朗读的问题；划词请求优先于等待中的整页任务，划词按钮标为「译伴翻译」。当前源码与运行产物不含旧平台品牌或唤起逻辑。
+### Your API key and data
 
-## 网页翻译
+API keys are stored in Chrome extension local storage, not Chrome Sync. They are read by trusted extension pages and the extension background only; ordinary webpages do not receive them. Text you choose to translate, selected-text context, and video captions are sent directly to the provider you configure. LingoStack has no account system, analytics service, or hosted proxy.
 
-点击扩展图标 →「翻译当前网页」。支持双语对照、仅译文、恢复原文、重新翻译，以及手动划词翻译。快捷键 `Alt+T`，Mac 键盘为 `Option+T`。也可以用网页右键菜单。
+Cloud TTS is optional and uses credentials and billing configured with that voice provider. A chat-product subscription is not necessarily API access.
 
-译伴只在手动触发时翻译当前页面，优先处理视口附近的文字，并监听新加载内容。扩展无法翻译 Chrome 设置页、扩展商店等受保护页面。扫描图片、图片式 PDF 和视频画面中的文字不属于本版本范围。
+### Current scope
 
-## YouTube 字幕与声音
+LingoStack supports webpages and captioned videos on standard YouTube `/watch` pages. It does not include ASR for videos without captions, arbitrary video-site support, speaker recognition, voice cloning, MP3 preprocessing, or a Chrome Web Store listing.
 
-1. 打开 YouTube 普通视频页面（地址含 `/watch?v=`），开始播放。
-2. 在扩展弹窗中打开「双语字幕」。
-3. 选择目标语言，需要听译文时打开「译文朗读」。
-4. 在设置页选择朗读服务、音色、语速和「长句读完再继续视频」，保存朗读配置。
+### Build from source
 
-字幕开关按标签页生效。字幕来源为视频人工字幕或 YouTube 自动生成的字幕；没有字幕的视频、Shorts、直播、嵌入播放器和其他视频网站暂不支持。这里没有音频识别、内录或声音克隆。
-
-Mac 上只列出 Chrome 可用的本机系统声音。没有目标语言声音时，会显示下载提示。具体音色取决于系统安装情况，并非所有 Siri 音色都会出现在 Chrome。
-
-朗读开启后，暂停、继续、拖动进度、视频结束和关闭功能会同步处理语音。默认在长句未读完时暂缓视频，避免一直积压。关闭该选项则保持连续播放并替换过时语音；这会截断来不及读完的句子。朗读时静音原声也会消除原视频的音乐和音效，不是人声分离。视频播放前几秒可能需要等待字幕获取和翻译。同一时刻只播放一项朗读任务，设置页试听也会打断视频朗读。
-
-完整字幕获取失败时，会尝试读取播放器已经显示的 CC 字幕。这条备用路径没有完整时间轴，翻译会稍晚于原字幕，并保持视频连续播放。滚动时只处理新增词句，避免把仍显示在屏幕上的上一句重新朗读；拖动进度会重置记录。原始字幕本身的错字和语音识别错误不会因此自动纠正。
-
-双语显示是一行译文、一行原文；完全相同的原文和译文只显示一次。字幕层标记为不参与网页翻译，避免原文被二次翻译。其他扩展是否遵守该标记取决于它们的实现。
-
-如果没有出现字幕，先检查 YouTube 自己的 CC 是否可用，再关闭并重新开启扩展字幕。切换 YouTube 的原始字幕轨后也请重新开启。广告期间停止朗读，回到正片后重建字幕会话。
-
-## 云端朗读开通与配置
-
-翻译和朗读是两份独立配置，可以选不同公司。默认使用免费的系统声音；云端朗读需要用户自己的语音 API 凭证，聊天会员通常不能代替 API 额度。
-
-| 服务 | 注册与控制台 | 本扩展需要填写 |
-| --- | --- | --- |
-| 阿里百炼 | https://bailian.console.aliyun.com/ | 区域、API Key、模型、音色 |
-| Azure | https://portal.azure.com/ | Speech 资源密钥、资源区域（如 eastus）、音色 |
-| MiniMax 国内站 | https://platform.minimaxi.com/ | 国内站 API Key、模型、音色 |
-| MiniMax 国际站 | https://platform.minimax.io/ | 国际站 API Key、模型、音色 |
-
-建议先试阿里百炼的 `qwen3-tts-instruct-flash` + Cherry（芊悦）+「自然聊天」。这是首轮试听建议，未做真实音色盲测。
-
-1. 在阿里百炼完成账号注册、开通服务，选择北京区域并创建该区域的 API Key。若账户有可用试用额度，先使用额度；没有额度再按控制台提示开通按量付费。
-2. 打开译伴设置，在「字幕朗读」中选择「阿里百炼」，选择北京区域，粘贴 Key。
-3. 保留默认模型和音色，点击「试听并测试」。按钮下方明确显示成功或失败原因；成功表示音频实际开始播放。
-4. 试听满意后点击「保存朗读配置」。回到 YouTube 开启「译文朗读」。系统声音、语速、字幕等通用选项在页面下方另行保存。
-
-Azure 需创建 Speech 资源，可在账号和地区允许时选择 F0 免费层；区域必须与资源一致。MiniMax 国内、国际站的 Key 不通用。各家免费额度、实名要求和计费以注册时控制台为准，不需要一次注册全部服务。
-
-Azure、MiniMax 支持「获取音色」；阿里显示明确标注的官方预设，也可手填音色 ID。音色列表不保证每个音色都对当前模型和账户开放，必须试听确认。语言支持因服务和音色而异；Azure 通常需要为目标语言另选匹配的音色。切换服务会保留各自已保存的配置；「删除此服务配置」会删除对应凭证。
-
-第一版按短句生成音频后播放，不是边生成边播放的流式语音。暂停、继续、拖动和关闭会同步处理云端音频；已经发出的合成请求即使取消，也可能计费。网络和生成耗时会增加等待，长句可配合「长句读完再继续视频」。
-
-「自然聊天」等风格影响合成表达；本版没有从视频原声识别情绪，也不克隆原说话人。字幕去重解决重复朗读，更换 TTS 本身不会修正重复字幕。
-
-## 模型配置
-
-支持四种协议：
-
-- 兼容聊天接口（Chat Completions）：DeepSeek、硅基流动、Moonshot、OpenRouter、百炼和兼容中转服务。
-- OpenAI Responses。
-- Anthropic Messages。
-- Gemini Generate Content。
-
-服务商预设只填地址和协议。点击「获取列表」后，按钮下方显示结果和模型数量，并出现独立的「选择已获取的模型」下拉框；选中即填入模型名称。也可以直接手动填写准确的模型 ID。选择后点击「保存配置」。部分服务商不提供模型列表，需要手动填写。模型是否可用由账户权限决定。API key 不等同于聊天产品的订阅。
-
-「测试翻译」按钮下方会显示测试中、测试通过及译文，或测试未通过及原因。测试使用当前输入的配置，不需要先保存；测试通过后仍需点击「保存配置」才能用于网页翻译。修改配置后旧测试结果会清除。获取模型失败或服务商返回空列表也会在按钮下方说明原因。
-
-自定义地址支持 HTTPS；本机 `localhost` 和 `127.0.0.1` 服务可以使用 HTTP。可填写 API 根地址或聊天请求完整地址，保存时会去掉 `/chat/completions`、`/responses` 或 `/messages` 后缀。接口错误显示 HTTP 状态和可操作提示，不暴露服务商可能回显的密钥或网页内容。
-
-## 数据与权限
-
-- 密钥保存在扩展本机存储，仅扩展可信界面和后台可读；不使用 Chrome 云同步。它不是操作系统钥匙串，也不提供额外磁盘加密。
-- 普通网页脚本不接收密钥。后台固定使用用户配置的地址，不接受网页指定的 API 目标。
-- 用户选择翻译的网页文字、相关标题/划词上下文、视频字幕会发送给所选翻译服务商；选择云端朗读时，译文和语音配置会发送给所选语音服务商。
-- 译文缓存在扩展 IndexedDB，按站点、语言和模型配置隔离。修改密钥或模型会切换缓存范围。
-- 本扩展无账户系统、埋点或自建中转服务器。
-- `storage` 保存配置；`contextMenus` 提供右键翻译；`tts` 使用系统语音；`offscreen` 在扩展隐藏页面中播放和控制云端音频；`activeTab` 获取当前操作页面；网页访问权限用于读取和回填网页、请求自定义 API。
-
-## 从源码构建
-
-需要 Node.js 22+ 和 pnpm。
+Requires Node.js 22+ and pnpm.
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm run typecheck
-pnpm test
-pnpm run build
 pnpm run package
 ```
 
-输出：`dist/chrome` 为可加载扩展；`release/译伴` 为交付目录。
+The build creates an unpacked extension in `dist/chrome` and release archives in `release/`. `pnpm run package` includes a credential-safe preflight scan. It prints only a file path and rule category if it finds a possible credential; it never prints the matched value.
 
-开发依赖只使用公开的软件包，运行产物为普通 HTML、CSS 和打包后的 JavaScript，不依赖 node_modules。旧项目只在初次提取时作为来源，构建脚本不访问旧目录。
+## 中文
 
-## 代码来源与修改
+LingoStack（译栈）是独立的 Chrome 扩展，用用户自行配置的 AI 服务翻译网页与 YouTube 字幕。它不需要桌面应用、本机后台服务，也不依赖原 Dim Agent 项目。
 
-网页解析/回填、划词、缓存/批处理、YouTube 字幕解析与调度、翻译提示词提取自用户提供的 原始克隆源码；所有需要的类型已经本地化。原项目的 Native Messaging、桌面服务、Agent SDK、共享工作区依赖和扩展身份已移除。服务商协议分类及地址规范参考原项目驱动；实际请求改为扩展后台的独立 HTTP 实现。
+### 功能
 
-新增了独立 API 配置、多协议请求、中文设置界面、按标签页的视频开关、系统声音选择与朗读同步，以及对应验证。图标为本项目绘制。
+- 手动翻译当前网页，支持双语对照、仅译文、恢复原文和划词翻译。
+- 翻译 YouTube 普通视频页字幕；可用 Chrome 系统声音或已支持的云端语音朗读译文。
+- 支持兼容 Chat Completions、OpenAI Responses、Anthropic Messages 和 Gemini Generate Content 的翻译接口。
+- 翻译和云端朗读分别配置；网页译文颜色可跟随原文或使用自定义颜色。
 
-浏览器集成验证（需要下载测试浏览器）：
+### 在 Chrome 本地安装
+
+1. 下载发布包，解压到一个长期保留的文件夹。
+2. 打开 `chrome://extensions`，开启右上角的「开发者模式」，点击「加载已解压的扩展程序」。
+3. 选择解压后的 `chrome` 文件夹，其中必须包含 `manifest.json`。
+4. 固定 LingoStack，打开「设置」，选择服务商，填入自己的 API Key 和模型，测试后保存。
+5. 刷新安装前已打开的网页。
+
+不要把 ZIP 直接拖入 Chrome。安装后不要移动或删除已加载的文件夹。升级时，用新版本的 `chrome` 文件夹内容覆盖原安装目录，在 `chrome://extensions` 点击「重新加载」；保留同一目录可以保留本机设置。
+
+### API Key 与数据
+
+API Key 保存于 Chrome 扩展本机存储，不使用 Chrome 同步。只有扩展可信页面和后台可以读取，普通网页无法取得。用户选择翻译的网页文字、划词上下文和视频字幕会直接发送给用户选择的服务商。译栈没有账户系统、埋点服务或自建中转服务器。
+
+云端朗读是可选功能，凭证和费用由用户与所选语音服务商分别配置和结算。聊天产品订阅不等同于 API 使用资格。
+
+### 当前范围
+
+译栈支持网页和 YouTube 普通 `/watch` 页中的现有字幕。不提供无字幕视频的语音识别、任意视频网站适配、说话人识别、声音克隆、MP3 预处理，也尚未上架 Chrome 应用商店。
+
+### 从源码构建
+
+需要 Node.js 22+ 与 pnpm。
 
 ```sh
-pnpm exec playwright install chromium
-node scripts/browser-check.mjs
-node scripts/video-flow-check.mjs
-node scripts/tts-browser-check.mjs
-LINGO_CLOUD_TTS=1 node scripts/video-flow-check.mjs
-node scripts/youtube-check.mjs
+pnpm install --frozen-lockfile
+pnpm run package
 ```
 
-网页与视频脚本使用本机测试 API，云端语音脚本在付费接口边界返回可播放的测试音频，不需要你的密钥；它们不代表已通过真实云账户或音色质量验收。最后一个使用真实 YouTube 视频检查字幕获取；测试译文来自本机固定响应，不代表模型翻译质量。
+构建后，`dist/chrome` 是可加载扩展，`release/` 包含发布包。`pnpm run package` 会先执行不泄露内容的凭证检查：发现疑似凭证时只报告文件路径和规则类别，绝不输出匹配值。
 
-具体验证范围见 `VALIDATION.md`。
+## Verification
+
+See [VALIDATION.md](VALIDATION.md) for the recorded validation boundary. See [docs/release/README.md](docs/release/README.md) for the public-release checklist.

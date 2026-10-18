@@ -17,12 +17,12 @@ function headers(c: ProviderConfig): Record<string, string> {
   return h
 }
 
-async function request(c: ProviderConfig, path: string, body: unknown, fetchFn: typeof fetch): Promise<any> {
+async function request(c: ProviderConfig, path: string, body: unknown, fetchFn: typeof fetch, timeoutMs = 25_000): Promise<any> {
   try {
     const response = await fetchFn(`${c.baseUrl}${path}`, {
       method: body === undefined ? "GET" : "POST", headers: headers(c),
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-      signal: AbortSignal.timeout(25_000), redirect: "error", credentials: "omit", cache: "no-store",
+      signal: AbortSignal.timeout(timeoutMs), redirect: "error", credentials: "omit", cache: "no-store",
     })
     if (!response.ok) {
       // Provider bodies may echo credentials or source text; show only a safe status.
@@ -39,24 +39,24 @@ async function request(c: ProviderConfig, path: string, body: unknown, fetchFn: 
   }
 }
 
-export async function complete(config: ProviderConfig, system: string, user: string, fetchFn: typeof fetch = fetch): Promise<string> {
+export async function complete(config: ProviderConfig, system: string, user: string, fetchFn: typeof fetch = fetch, timeoutMs = 25_000): Promise<string> {
   const c = validateProvider(config)
   let data: any
   let text = ""
   if (c.protocol === "anthropic") {
-    data = await request(c, "/messages", { model: c.model, max_tokens: 4096, system, messages: [{ role: "user", content: user }] }, fetchFn)
+    data = await request(c, "/messages", { model: c.model, max_tokens: 4096, system, messages: [{ role: "user", content: user }] }, fetchFn, timeoutMs)
     if (data.stop_reason === "max_tokens") throw new ProviderError("parse_error", "模型输出被截断，请缩短选区或更换模型。")
     text = data.content?.filter((p: any) => p.type === "text").map((p: any) => p.text).join("") ?? ""
   } else if (c.protocol === "gemini") {
-    data = await request(c, `/models/${encodeURIComponent(c.model.replace(/^models\//, ""))}:generateContent`, { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }] }, fetchFn)
+    data = await request(c, `/models/${encodeURIComponent(c.model.replace(/^models\//, ""))}:generateContent`, { systemInstruction: { parts: [{ text: system }] }, contents: [{ role: "user", parts: [{ text: user }] }] }, fetchFn, timeoutMs)
     if (data.candidates?.[0]?.finishReason === "MAX_TOKENS") throw new ProviderError("parse_error", "模型输出被截断。")
     text = data.candidates?.[0]?.content?.parts?.filter((p: any) => !p.thought && typeof p.text === "string").map((p: any) => p.text).join("") ?? ""
   } else if (c.protocol === "openai-responses") {
-    data = await request(c, "/responses", { model: c.model, instructions: system, input: user, store: false, stream: false }, fetchFn)
+    data = await request(c, "/responses", { model: c.model, instructions: system, input: user, store: false, stream: false }, fetchFn, timeoutMs)
     if (data.status === "incomplete" || data.error) throw new ProviderError("parse_error", "模型未完成翻译，请重试或更换模型。")
     text = data.output?.filter((p: any) => p.type === "message").flatMap((p: any) => p.content ?? []).filter((p: any) => p.type === "output_text").map((p: any) => p.text).join("") ?? ""
   } else {
-    data = await request(c, "/chat/completions", { model: c.model, stream: false, messages: [{ role: "system", content: system }, { role: "user", content: user }] }, fetchFn)
+    data = await request(c, "/chat/completions", { model: c.model, stream: false, messages: [{ role: "system", content: system }, { role: "user", content: user }] }, fetchFn, timeoutMs)
     if (data.choices?.[0]?.finish_reason === "length") throw new ProviderError("parse_error", "模型输出被截断。")
     const content = data.choices?.[0]?.message?.content
     text = typeof content === "string" ? content : Array.isArray(content) ? content.filter(p => p.type === "text").map(p => p.text).join("") : ""

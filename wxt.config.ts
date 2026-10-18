@@ -4,7 +4,7 @@ export default defineConfig({
   outDir: "dist",
   outDirTemplate: "chrome",
   manifest: {
-    name: "译伴 · 网页与字幕翻译",
+    name: "译栈 · 网页与字幕翻译",
     description: "使用自己的模型 API 翻译网页与 YouTube 字幕，用系统或云端自然声音朗读译文。",
     options_ui: { page: "options.html", open_in_tab: true },
     minimum_chrome_version: "124",

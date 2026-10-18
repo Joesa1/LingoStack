@@ -29,7 +29,7 @@
  */
 import type { TrPageStateReply, TrSettingsReply } from "../src/shared/types"
 
-import { readChangedSettings } from "../src/shared/settings-store"
+import { readChangedSettings, parseSettings } from "../src/shared/settings-store"
 import { TRANSLATE_PORT_NAME } from "../src/background/message-router"
 import { ensureStyleInjected } from "../src/content-scripts/backfill"
 
@@ -172,12 +172,18 @@ export default defineContentScript({
       if ((event as KeyboardEvent).key === "Enter") retryFromEvent(event)
     })
 
+    function applyTranslationColor(raw: unknown) {
+      const settings = parseSettings(raw)
+      document.documentElement.style.setProperty("--lingo-translation-color", settings.translationColorMode === "custom" ? settings.translationColor : "inherit")
+    }
+
     // Seed the language preference for the selection toolbar (a fresh page is
     // always mode "off" — D8 — so no mode is applied here).
     chrome.runtime
       .sendMessage({ type: "TR_GET_SETTINGS" })
       .then((reply: TrSettingsReply | undefined) => {
         if (reply === undefined) return
+        applyTranslationColor(reply)
         preferredTargetLang = reply.targetLang
         selectionEnabled = reply.selectionEnabled
       })
@@ -189,6 +195,7 @@ export default defineContentScript({
     chrome.storage.onChanged.addListener((changes, area) => {
       const next = readChangedSettings(changes, area)
       if (next === undefined) return
+      applyTranslationColor(next)
       preferredTargetLang = next.targetLang
       selectionEnabled = next.selectionEnabled
     })

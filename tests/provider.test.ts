@@ -21,6 +21,21 @@ describe("provider translation contracts", () => {
     expect(init?.redirect).toBe("error")
     expect(JSON.parse(init?.body as string).model ?? "test-model").toBe(config.model)
   })
+  it.each(["openai-compatible", "openai-responses", "anthropic", "gemini"] as Protocol[])("honors a bounded long-job deadline through %s, including response body reads", async protocol => {
+    const timeout = vi.spyOn(AbortSignal, "timeout")
+    const stalled = vi.fn(async (_url, init) => {
+      const signal = init!.signal!
+      return { ok: true, json: () => new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true })
+      }) } as Response
+    }) as unknown as typeof fetch
+    try {
+      await expect(complete({ ...config, protocol }, "system", "text", stalled, 30)).rejects.toMatchObject({ code: "timeout" })
+      expect(timeout).toHaveBeenLastCalledWith(30)
+      await complete(config, "system", "text", mock({ choices: [{ message: { content: "ok" } }] }))
+      expect(timeout).toHaveBeenLastCalledWith(25_000)
+    } finally { timeout.mockRestore() }
+  })
   it("rejects partial output and leaves every unmatched item retryable", async () => {
     const result = await translate(config, params, mock({ choices: [{ message: { content: "合并了两句话" } }] }))
     expect(result.results).toHaveLength(0); expect(result.errors).toHaveLength(2)

@@ -1,3 +1,26 @@
+# Public release validation
+
+- `node scripts/release-check.mjs` scans tracked text files for common credential patterns. It reports only paths and rule categories; it does not print matching values.
+- `scripts/package.mjs` runs that scan before packaging and verifies that the share archive contains only `chrome/` and `INSTALL.txt`.
+- `pnpm run package` runs type checking, production build, and archive validation. The full test suite remains available through `pnpm test` and is not a packaging prerequisite.
+- This check does not establish that all reachable Git history is credential-free. Review history and GitHub secret scanning before changing repository visibility.
+
+# 1.3.1 translation color validation
+
+Real Chromium extension checks passed: adaptive source color on dark and light backgrounds, custom color applied to existing translation, settings persisted after options reload, and no additional translation request on color change. Existing model list, translation feedback, page translation, dynamic content, selection and restore checks also passed. Targeted strict TypeScript check passed.
+
+# 1.3.0 UI release validation
+
+Date: 2026-09-15.
+
+- Production build: Chrome MV3, version 1.3.0, name 译栈 · 网页与字幕翻译. Supplied SVG rendered at 16/32/48/128 px. No additional runtime dependencies.
+- Real Chromium extension checks passed: translation configuration, model lists, test feedback, webpage translation, dynamic content, restore, selection action, cloud TTS settings for three providers, voices, persistence, preview playback, cancellation and responsive layout. Cloud calls use test audio at the HTTP boundary, not a paid live account.
+- Popup verified at 390 × 600 px with the new icon loaded and no overflow. Original options form IDs are preserved; panel navigation only changes visibility. Full npm run typecheck and targeted strict TypeScript checks passed. Nineteen provider and TTS unit tests passed.
+- The full test suite did not complete in this environment: jsdom worker initialization timed out, and an unrelated preprocessing test initially lacked its Python runtime. The successful extension browser checks and targeted checks above are not a claim that the full suite passed.
+- Main branch unchanged. No changes to translation/voice algorithms, provider configuration, storage keys, extension permissions, or the preprocessing app. Runtime string changes are branding only.
+
+---
+
 # 验证记录
 
 验证日期：2026-09-11。以下按真实执行结果记录，不把测试数据当作真实模型输出。

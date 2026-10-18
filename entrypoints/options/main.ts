@@ -86,17 +86,45 @@ function renderVoices(selected = "") {
 async function saveSpeech() {
   const rate = Number($<HTMLInputElement>("rate").value)
   $("rateValue").textContent = `${rate.toFixed(1)}×`
-  await rpc("TR_UPDATE_SETTINGS", { patch: { targetLang: language.value, voiceName: $<HTMLSelectElement>("voice").value, speechRate: rate, muteOriginal: $<HTMLInputElement>("mute").checked, waitForSpeech: $<HTMLInputElement>("wait").checked } })
+  const mode = $<HTMLSelectElement>("speechMode").value as "natural" | "sync"
+  await rpc("TR_UPDATE_SETTINGS", { patch: { targetLang: language.value, voiceName: $<HTMLSelectElement>("voice").value, speechRate: rate, muteOriginal: $<HTMLInputElement>("mute").checked, waitForSpeech: mode === "sync", speechMode: mode } })
   status("朗读偏好已保存。")
 }
 language.onchange = () => { renderVoices(); void saveSpeech().catch(e => status(e.message, true)) }
-for (const id of ["voice", "rate", "mute", "wait"]) $(id).onchange = () => { void saveSpeech().catch(e => status(e.message, true)) }
+for (const id of ["voice", "rate", "mute", "speechMode"]) $(id).onchange = () => { void saveSpeech().catch(e => status(e.message, true)) }
 $("rate").oninput = () => { $("rateValue").textContent = `${Number($<HTMLInputElement>("rate").value).toFixed(1)}×` }
 void (async () => {
   await initTtsSettings()
   const [c, s, v] = await Promise.all([rpc("GET_CONFIG"), rpc("TR_GET_SETTINGS"), rpc("GET_VOICES")])
+  $<HTMLSelectElement>("translationColorMode").value = s.translationColorMode ?? "auto"
+  $<HTMLInputElement>("translationColor").value = s.translationColor ?? "#007aff"
+  $("translationColorLabel").hidden = s.translationColorMode !== "custom"
   showConfig(c); language.value = s.targetLang; voices = v.voices; renderVoices(s.voiceName)
   $<HTMLInputElement>("rate").value = String(s.speechRate); $("rateValue").textContent = `${s.speechRate.toFixed(1)}×`
-  $<HTMLInputElement>("mute").checked = s.muteOriginal; $<HTMLInputElement>("wait").checked = s.waitForSpeech
+  $<HTMLInputElement>("mute").checked = s.muteOriginal
+  $<HTMLSelectElement>("speechMode").value = s.speechMode
   status(s.providerReady ? "配置已就绪，可返回网页开始翻译。" : "填写 API key 和模型名称，然后保存配置。")
 })().catch(e => status(e.message, true))
+
+// Switch presentation panels without changing configuration or provider state.
+for (const [index, id] of ["translationTab", "speechTab"].entries()) {
+  $(id).onclick = () => {
+    for (const [i, tab] of ["translationTab", "speechTab"].entries()) {
+      $(tab).classList.toggle("active", i === index)
+      $(tab).setAttribute("aria-pressed", String(i === index))
+    }
+    $("translationPanel").hidden = index !== 0
+    $("speechPanel").hidden = index !== 1
+  }
+}
+
+for (const id of ["translationColorMode", "translationColor"]) {
+  $(id).onchange = async () => {
+    const mode = $<HTMLSelectElement>("translationColorMode").value
+    $("translationColorLabel").hidden = mode !== "custom"
+    try {
+      await rpc("TR_UPDATE_SETTINGS", { patch: { translationColorMode: mode, translationColor: $<HTMLInputElement>("translationColor").value } })
+      $("colorStatus").textContent = "译文颜色已保存。"
+    } catch (e) { $("colorStatus").textContent = e instanceof Error ? e.message : "保存失败，请重试。" }
+  }
+}

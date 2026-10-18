@@ -8,6 +8,7 @@
     "build": "wxt build",
     "typecheck": "wxt prepare && tsc --noEmit",
     "test": "vitest run",
+    "release:check": "node scripts/release-check.mjs",
     "package": "npm run typecheck && npm test && npm run build && node scripts/package.mjs"
   },
   "devDependencies": {

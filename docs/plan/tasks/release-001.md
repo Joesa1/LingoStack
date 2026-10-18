@@ -1,7 +1,7 @@
 ---
 id: release-001
 scope: release
-status: ready
+status: complete
 depends-on: []
 ---
 
